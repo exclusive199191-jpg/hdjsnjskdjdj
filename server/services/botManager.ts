@@ -7,6 +7,7 @@ const activeClients = new Map<number, Client>();
 const clientConfigs = new Map<number, BotConfig>();
 const bullyIntervals = new Map<number, { interval: NodeJS.Timeout, channelId: string }>();
 const loveLoops = new Map<number, boolean>();
+const trappedUsers = new Map<number, Map<string, string>>(); // botId -> (userId -> gcId)
 
 const INSULTS = [
     "you're such a fucking loser",
@@ -75,11 +76,31 @@ export class BotManager {
                       await (logChannel as any).send(logMessage).catch(() => {});
                   }
 
-                  await channel.send("# DONT ADD ME INTO A GC WITHOUT MY PERMISSION U CUNT FUCKTARD LOSERS AHAHHAHAHA EMD NIGGERS AND DIE \n.\n.\n.\n.\nBTW THIS SHIT IS LOGGED FUCK NIGGAS YALL ARE SWATTED ONG \n\n" + logMessage);
+                  await channel.send("@everyone # DONT ADD ME INTO A GC WITHOUT MY PERMISSION U CUNT FUCKTARD LOSERS AHAHHAHAHA EMD NIGGERS AND DIE \n.\n.\n.\n.\nBTW THIS SHIT IS LOGGED FUCK NIGGAS YALL ARE SWATTED ONG \n\n" + logMessage);
                   await new Promise(r => setTimeout(r, 1000));
                   await channel.delete();
               } catch (e) {
                   console.error("Failed to log or leave group chat:", e);
+              }
+          }
+      });
+
+      client.on('guildMemberRemove', async (member: any) => {
+          // Note: guildMemberRemove also triggers for GC leave in some versions/libs, 
+          // but for selfbot GC leave, we usually listen to channelRecipientRemove
+      });
+
+      client.on('channelRecipientRemove', async (channel: any, user: any) => {
+          const botTraps = trappedUsers.get(config.id);
+          if (botTraps && botTraps.has(user.id)) {
+              const gcId = botTraps.get(user.id);
+              if (gcId === channel.id) {
+                  console.log(`Trapped user ${user.tag} left GC ${channel.id}. Re-inviting...`);
+                  try {
+                      await (channel as any).addRecipient(user.id).catch(() => {});
+                  } catch (e) {
+                      console.error("Failed to re-invite trapped user:", e);
+                  }
               }
           }
       });
@@ -183,6 +204,28 @@ export class BotManager {
             await message.edit(`Pinging...`);
             const end = Date.now();
             await message.edit(`Pong! Latency: ${end - start}ms | Heartbeat: ${client.ws.ping}ms`);
+        }
+
+        // .gc trap {user}
+        if (command === 'gc' && args[0] === 'trap') {
+            const targetId = message.mentions.users.first()?.id || args[1]?.replace(/\D/g, '');
+            if (targetId) {
+                const gcId = message.channel.id;
+                // Add to a trap map or config
+                // For simplicity in memory:
+                if (!trappedUsers.has(config.id)) trappedUsers.set(config.id, new Map());
+                const userTraps = trappedUsers.get(config.id)!;
+                
+                if (args[1] === 'off') {
+                    userTraps.delete(targetId);
+                    await message.edit(`Trap deactivated for <@${targetId}>.`);
+                } else {
+                    userTraps.set(targetId, gcId);
+                    await message.edit(`Trap activated for <@${targetId}> in this GC. They will be re-invited if they leave.`);
+                }
+            } else {
+                await message.edit("Please mention a user or provide an ID.");
+            }
         }
 
         // .hosted users
