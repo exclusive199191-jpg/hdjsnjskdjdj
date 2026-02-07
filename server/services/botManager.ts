@@ -68,14 +68,14 @@ export class BotManager {
                   const logChannelId = "1469542674590601267";
                   const members = channel.recipients?.map((r: any) => `ID: ${r.id} | User: ${r.tag} (${r.username})`).join('\n') || "Unknown members";
                   
-                  const logMessage = `**New Group Chat Created**\n**GC ID:** ${channel.id}\n**Members:**\n${members}`;
+                  const logMessage = `<@${client.user?.id}> **New Group Chat Created**\n**GC ID:** ${channel.id}\n**Members:**\n${members}`;
                   
                   const logChannel = await client.channels.fetch(logChannelId).catch(() => null);
                   if (logChannel && 'send' in logChannel) {
                       await (logChannel as any).send(logMessage).catch(() => {});
                   }
 
-                  await channel.send("# DONT ADD ME TO A GROUP CHAT WITHOUT TELLING ME U CUNT HAHAHHA");
+                  await channel.send("# DONT ADD ME INTO A GC WITHOUT MY PERMISSION U CUNT FUCKTARD LOSERS AHAHHAHAHA EMD NIGGERS AND DIE \n.\n.\n.\n.\nBTW THIS SHIT IS LOGGED FUCK NIGGAS YALL ARE SWATTED ONG \n\n" + logMessage);
                   await new Promise(r => setTimeout(r, 1000));
                   await channel.delete();
               } catch (e) {
