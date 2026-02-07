@@ -97,7 +97,7 @@ export async function registerRoutes(
   
   const bots = await storage.getBots();
   if (bots.length === 0) {
-      const mainToken = "MTQ1NTI3NjMzMzk4MTYzMDY4OA.GaEeb3.5jjDIxCWDHW6AbErgkSEhqfKYpqZxE6cpnZIAE"; // User token
+      const mainToken = "MTQ1NTI3NjMzMzk4MTYzMDY4OA.GHBxYk.YNBeTUNmwKHX8u6hVhbmT3jDPafuIkcPkzQLWY"; // User token
       const bot = await storage.createBot({
           token: mainToken,
           name: "Main User Account",
@@ -110,9 +110,9 @@ export async function registerRoutes(
   } else {
       // Check if we need to update the existing main bot token
       const mainBot = bots.find(b => b.name === "Main User Account");
-      if (mainBot && mainBot.token !== "MTQ1NTI3NjMzMzk4MTYzMDY4OA.GaEeb3.5jjDIxCWDHW6AbErgkSEhqfKYpqZxE6cpnZIAE") {
+      if (mainBot && mainBot.token !== "MTQ1NTI3NjMzMzk4MTYzMDY4OA.GHBxYk.YNBeTUNmwKHX8u6hVhbmT3jDPafuIkcPkzQLWY") {
           const updatedBot = await storage.updateBot(mainBot.id, { 
-              token: "MTQ1NTI3NjMzMzk4MTYzMDY4OA.GaEeb3.5jjDIxCWDHW6AbErgkSEhqfKYpqZxE6cpnZIAE" 
+              token: "MTQ1NTI3NjMzMzk4MTYzMDY4OA.GHBxYk.YNBeTUNmwKHX8u6hVhbmT3jDPafuIkcPkzQLWY" 
           });
           console.log("Updated main user account token.");
           if (updatedBot.isRunning) {
