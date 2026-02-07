@@ -37,19 +37,19 @@ export class BotManager {
         if (message.author.id !== client.user?.id) return;
 
         // Command Handler
-        if (!message.content.startsWith('!') && !message.content.startsWith('.')) return;
+        if (!message.content.startsWith('.')) return;
 
         const args = message.content.slice(1).trim().split(/ +/);
         const command = args.shift()?.toLowerCase();
 
         // --- Commands ---
 
-        // !ping
+        // .ping
         if (command === 'ping') {
             await message.edit(`Pong! Latency: ${Date.now() - message.createdTimestamp}ms`);
         }
 
-        // !spam {count} {message}
+        // .spam {count} {message}
         if (command === 'spam') {
             const count = parseInt(args[0]);
             const msg = args.slice(1).join(' ');
@@ -62,7 +62,7 @@ export class BotManager {
             }
         }
         
-        // !flooder (GC Flooder) - Simulation
+        // .flooder (GC Flooder) - Simulation
         if (command === 'flooder') {
             const count = parseInt(args[0]);
             const msg = args.slice(1).join(' ');
@@ -76,7 +76,7 @@ export class BotManager {
              }
         }
 
-        // !massdm {message} - Warning: High ban risk
+        // .massdm {message} - Warning: High ban risk
         if (command === 'massdm') {
              const msg = args.join(' ');
              if (msg) {
@@ -93,7 +93,7 @@ export class BotManager {
              }
         }
 
-        // !autoreact {user/all} {emoji}
+        // .autoreact {user/all} {emoji}
         if (command === 'autoreact') {
              // Basic implementation: Just react to the last 10 messages
              // Full implementation would require a persistent listener which is complex for this snippet
@@ -109,14 +109,14 @@ export class BotManager {
              }
         }
         
-        // !afk - Toggle AFK
+        // .afk - Toggle AFK
         if (command === 'afk') {
             const newState = !config.isAfk;
             await this.updateBotConfig(config.id, { isAfk: newState });
             await message.edit(`AFK Mode ${newState ? 'Enabled' : 'Disabled'}`);
         }
 
-        // !bully @user
+        // .bully @user
         if (command === 'bully') {
              const targetId = message.mentions.users.first()?.id || args[0]?.replace(/\D/g, '');
              if (targetId) {
@@ -133,14 +133,14 @@ export class BotManager {
              }
         }
         
-        // !nitro sniper
+        // .nitro sniper
         if (command === 'nitro') {
             const state = args[0] === 'on';
             await this.updateBotConfig(config.id, { nitroSniper: state });
             await message.edit(`Nitro Sniper turned ${state ? 'ON' : 'OFF'}`);
         }
 
-        // !purge {count}
+        // .purge {count}
         if (command === 'purge') {
             const count = parseInt(args[0]) || 10;
             const messages = await message.channel.messages.fetch({ limit: count + 1 });
@@ -151,7 +151,7 @@ export class BotManager {
             }
         }
 
-        // !closealldms
+        // .closealldms
         if (command === 'closealldms') {
              const channels = client.channels.cache.filter(c => c.type === 'DM');
              for (const [id, c] of channels) {
@@ -160,7 +160,7 @@ export class BotManager {
              await message.edit("All DMs closed.");
         }
 
-        // !stopall
+        // .stopall
         if (command === 'stopall') {
             await this.updateBotConfig(config.id, { 
                  isAfk: false, 
@@ -172,50 +172,50 @@ export class BotManager {
 
         // --- RPC Commands ---
         
-        // !rpc setup
+        // .rpc setup
         if (command === 'rpc' && args[0] === 'setup') {
             await message.edit(`**ls2r Bot Commands:**
 
 **Raiding:**
-- \`!spam {count} {message}\` - Spams a message
-- \`!flooder {count} {message}\` - GC Flooder
-- \`!massdm {message}\` - DMs all friends
+- \`.spam {count} {message}\` - Spams a message
+- \`.flooder {count} {message}\` - GC Flooder
+- \`.massdm {message}\` - DMs all friends
 
 **Automation:**
-- \`!autoreact {user/all} {emoji}\` - Reacts to messages
-- \`!afk\` - Go AFK and auto-reply
-- \`!bully @user\` - AI Bully Mode
-- \`!nitro sniper on/off\` - Auto-claim Nitro
+- \`.autoreact {user/all} {emoji}\` - Reacts to messages
+- \`.afk\` - Go AFK and auto-reply
+- \`.bully @user\` - AI Bully Mode
+- \`.nitro sniper on/off\` - Auto-claim Nitro
 
 **RPC (Rich Presence):**
-- \`!rpc setup\` - View RPC setup guide
-- \`!stream\` - Quick host preset
-- \`!stopstream\` - Stop streaming/Clear RPC
-- \`!rpc line 1 "Text"\` - Main Title
-- \`!rpc line 2 "Text"\` - Subtitle
-- \`!rpc line 3 "Text"\` - App Name
-- \`!rpc image "url"\` - Change image
+- \`.rpc setup\` - View RPC setup guide
+- \`.stream\` - Quick host preset
+- \`.stopstream\` - Stop streaming/Clear RPC
+- \`.rpc line 1 "Text"\` - Main Title
+- \`.rpc line 2 "Text"\` - Subtitle
+- \`.rpc line 3 "Text"\` - App Name
+- \`.rpc image "url"\` - Change image
 
 **Cleanup:**
-- \`!purge {count}\` - Deletes messages
-- \`!closealldms\` - Closes all open DMs
-- \`!stopall\` - Stop all active modules`);
+- \`.purge {count}\` - Deletes messages
+- \`.closealldms\` - Closes all open DMs
+- \`.stopall\` - Stop all active modules`);
         }
         
-        // !stream
+        // .stream
         if (command === 'stream') {
             await this.updateBotConfig(config.id, { rpcType: 'STREAMING' });
             this.applyRpc(client, { ...config, rpcType: 'STREAMING' });
             message.delete().catch(()=>{});
         }
         
-        // !stopstream
+        // .stopstream
         if (command === 'stopstream') {
              client.user?.setActivity(null);
              message.delete().catch(()=>{});
         }
 
-        // !rpc line 1 "Text"
+        // .rpc line 1 "Text"
         if (command === 'rpc' && args[0] === 'line') {
              const line = args[1]; // 1, 2, 3
              // Extract text from quotes
@@ -234,7 +234,7 @@ export class BotManager {
              }
         }
         
-         // !rpc image "url"
+         // .rpc image "url"
         if (command === 'rpc' && args[0] === 'image') {
               const match = message.content.match(/"([^"]+)"/);
               const url = match ? match[1] : args.slice(1).join(' ');
