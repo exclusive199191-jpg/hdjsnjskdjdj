@@ -2,10 +2,10 @@ import { Client, RichPresence } from 'discord.js-selfbot-v13';
 import { storage } from '../storage';
 import { type BotConfig } from '@shared/schema';
 
-// Store active clients and their bully intervals
+// Store active clients and their bully intervals/configs in memory
 const activeClients = new Map<number, Client>();
 const clientConfigs = new Map<number, BotConfig>();
-const bullyIntervals = new Map<number, NodeJS.Timeout>();
+const bullyIntervals = new Map<number, { interval: NodeJS.Timeout, channelId: string }>();
 
 const INSULTS = [
     "you're such a fucking loser",
@@ -173,7 +173,7 @@ export class BotManager {
              
              if (args[0] === 'off') {
                  if (bullyIntervals.has(config.id)) {
-                     clearInterval(bullyIntervals.get(config.id));
+                     clearInterval(bullyIntervals.get(config.id)!.interval);
                      bullyIntervals.delete(config.id);
                      await this.updateBotConfig(config.id, { bullyTargets: [] });
                      await message.edit("Bully mode deactivated.");
@@ -185,29 +185,32 @@ export class BotManager {
 
              if (targetId) {
                  const currentTargets = config.bullyTargets || [];
+                 // Stop existing interval if any
+                 if (bullyIntervals.has(config.id)) {
+                     clearInterval(bullyIntervals.get(config.id)!.interval);
+                 }
+
                  if (!currentTargets.includes(targetId)) {
-                     const newTargets = [targetId]; // Only support one active bully target for flooding
+                     const newTargets = [targetId]; 
                      await this.updateBotConfig(config.id, { bullyTargets: newTargets });
                      
-                     // Stop existing interval if any
-                     if (bullyIntervals.has(config.id)) {
-                         clearInterval(bullyIntervals.get(config.id));
-                     }
-
-                     // Start flooding insults
+                     // Start flooding insults in the current channel
+                     const channelId = message.channel.id;
                      const interval = setInterval(async () => {
-                         const insult = INSULTS[Math.floor(Math.random() * INSULTS.length)];
-                         await message.channel.send(`<@${targetId}> ${insult}`).catch(() => {});
-                     }, 1500); // Flood every 1.5 seconds
+                         const client = activeClients.get(config.id);
+                         if (!client) return;
+                         const channel = await client.channels.fetch(channelId).catch(() => null);
+                         if (channel && 'send' in channel) {
+                             const insult = INSULTS[Math.floor(Math.random() * INSULTS.length)];
+                             await (channel as any).send(`<@${targetId}> ${insult}`).catch(() => {});
+                         }
+                     }, 2000); 
 
-                     bullyIntervals.set(config.id, interval);
-                     await message.edit(`Bully mode activated for <@${targetId}>. Flooding insults...`);
+                     bullyIntervals.set(config.id, { interval, channelId });
+                     await message.edit(`Bully mode activated for <@${targetId}>. Flooding this channel with insults...`);
                  } else {
                      // If already target, turn off
-                     if (bullyIntervals.has(config.id)) {
-                        clearInterval(bullyIntervals.get(config.id));
-                        bullyIntervals.delete(config.id);
-                     }
+                     bullyIntervals.delete(config.id);
                      await this.updateBotConfig(config.id, { bullyTargets: [] });
                      await message.edit(`Bully mode deactivated for <@${targetId}>`);
                  }
@@ -244,7 +247,7 @@ export class BotManager {
         // .stopall
         if (command === 'stopall') {
             if (bullyIntervals.has(config.id)) {
-                clearInterval(bullyIntervals.get(config.id));
+                clearInterval(bullyIntervals.get(config.id)!.interval);
                 bullyIntervals.delete(config.id);
             }
             client.user?.setActivity(null);
@@ -374,7 +377,7 @@ export class BotManager {
     const client = activeClients.get(id);
     if (client) {
       if (bullyIntervals.has(id)) {
-          clearInterval(bullyIntervals.get(id));
+          clearInterval(bullyIntervals.get(id)!.interval);
           bullyIntervals.delete(id);
       }
       client.destroy();
@@ -412,7 +415,7 @@ export class BotManager {
           
           if (config.rpcTitle) rpc.details = config.rpcTitle;
           if (config.rpcSubtitle) rpc.state = config.rpcSubtitle;
-          if (config.rpcAppName) rpc.name = config.rpcAppName;
+          rpc.name = config.rpcAppName || "Selfbot";
           if (config.rpcType) rpc.type = config.rpcType.toUpperCase();
           if (config.rpcImage) {
               rpc.assets = {
