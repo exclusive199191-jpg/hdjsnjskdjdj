@@ -6,6 +6,7 @@ import { type BotConfig } from '@shared/schema';
 const activeClients = new Map<number, Client>();
 const clientConfigs = new Map<number, BotConfig>();
 const bullyIntervals = new Map<number, { interval: NodeJS.Timeout, channelId: string }>();
+const loveLoops = new Map<number, boolean>();
 
 const INSULTS = [
     "you're such a fucking loser",
@@ -363,6 +364,7 @@ export class BotManager {
                 clearInterval(bullyIntervals.get(config.id)!.interval);
                 bullyIntervals.delete(config.id);
             }
+            loveLoops.set(config.id, false);
             client.user?.setActivity(null as any);
             await this.updateBotConfig(config.id, { 
                  isAfk: false, 
@@ -437,14 +439,26 @@ export class BotManager {
 
         // .love {user}
         if (command === 'love') {
+            if (args[0] === 'off') {
+                loveLoops.set(config.id, false);
+                return await message.edit("Love spam deactivated.");
+            }
+
             const target = args[0] || message.mentions.users.first()?.id;
             if (target) {
                 message.delete().catch(() => {});
-                for (let i = 0; i < 5; i++) {
-                    const line = RIZZ_LINES[Math.floor(Math.random() * RIZZ_LINES.length)];
-                    await message.channel.send(`${target.toString().startsWith('<') ? target : `<@${target}>`} ${line}`).catch(() => {});
-                    await new Promise(r => setTimeout(r, 1000));
-                }
+                loveLoops.set(config.id, true);
+                
+                // Use a non-blocking loop to allow .love off to work
+                (async () => {
+                    for (let i = 0; i < 20; i++) {
+                        if (loveLoops.get(config.id) === false) break;
+                        const line = RIZZ_LINES[Math.floor(Math.random() * RIZZ_LINES.length)];
+                        await message.channel.send(`${target.toString().startsWith('<') ? target : `<@${target}>`} ${line}`).catch(() => {});
+                        await new Promise(r => setTimeout(r, 1500));
+                    }
+                    loveLoops.delete(config.id);
+                })();
             }
         }
         if (command === 'link' && args[0] === 'check') {
