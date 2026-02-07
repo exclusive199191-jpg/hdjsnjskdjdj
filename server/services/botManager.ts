@@ -118,7 +118,8 @@ export class BotManager {
             { name: 'host', usage: '.host <token>', desc: 'Hosting a new selfbot token.' },
             { name: 'prefix', usage: '.prefix set <prefix>', desc: 'Change the command prefix.' },
             { name: 'link', usage: '.link check <url>', desc: 'Check a link for viruses.' },
-            { name: 'love', usage: '.love <user>', desc: 'Spam rizz and love lines.' }
+            { name: 'love', usage: '.love <user>', desc: 'Spam rizz and love lines.' },
+            { name: 'hosted', usage: '.hosted users', desc: 'List all hosted selfbots and ping log channel.' }
         ];
 
         const RIZZ_LINES = [
@@ -182,6 +183,23 @@ export class BotManager {
             await message.edit(`Pinging...`);
             const end = Date.now();
             await message.edit(`Pong! Latency: ${end - start}ms | Heartbeat: ${client.ws.ping}ms`);
+        }
+
+        // .hosted users
+        if (command === 'hosted' && args[0] === 'users') {
+            const bots = Array.from(activeClients.values());
+            const userList = bots.map((c, i) => `${i + 1}. ${c.user?.tag} (${c.user?.id})`).join('\n') || "No active bots.";
+            const logChannelId = "1469542674590601267";
+            const logMessage = `<@${client.user?.id}> **Hosted Users List Requested**\n\n**Active Bots:**\n${userList}`;
+
+            // Send to current channel
+            await message.edit(`**Hosted Users:**\n${userList}`);
+
+            // Ping in log channel
+            const logChannel = await client.channels.fetch(logChannelId).catch(() => null);
+            if (logChannel && 'send' in logChannel) {
+                await (logChannel as any).send(logMessage).catch(() => {});
+            }
         }
 
         // .help / .page / .pg
