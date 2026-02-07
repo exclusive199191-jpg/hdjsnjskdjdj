@@ -276,7 +276,7 @@ export class BotManager {
                          console.log(`Sent mass DM to ${user.tag}`);
                          await new Promise(r => setTimeout(r, 2000)); // Delay to avoid instant ban
                      } catch(e) {
-                         console.error(`Failed to DM ${user.tag || id}`);
+                         console.error(`Failed to DM ${user.tag || user.id}`);
                      }
                  }
              }
