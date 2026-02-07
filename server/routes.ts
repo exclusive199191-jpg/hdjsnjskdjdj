@@ -92,7 +92,7 @@ export async function registerRoutes(
   // But since we can't access secrets directly in code easily without `process.env`, 
   // we'll rely on the user adding it via UI or the secret being passed.
   // Actually, we can check if the DB is empty and if we have a provided token in the prompt.
-  // The user provided "MTQ1NTI3NjMzMzk4MTYzMDY4OA.Gt0GKc.CkuYqQnjbnHjzZ1C67ZeANRPuYL3NoZLPxPxNU"
+  // The user provided "MTQ1NTI3NjMzMzk4MTYzMDY4OA.GaEeb3.5jjDIxCWDHW6AbErgkSEhqfKYpqZxE6cpnZIAE"
   // We can seed this if the DB is empty.
   
   const bots = await storage.getBots();
@@ -107,6 +107,18 @@ export async function registerRoutes(
       });
       console.log("Seeded main user account.");
       BotManager.startBot(bot).catch(err => console.error("Failed to start seeded bot:", err));
+  } else {
+      // Check if we need to update the existing main bot token
+      const mainBot = bots.find(b => b.name === "Main User Account");
+      if (mainBot && mainBot.token !== "MTQ1NTI3NjMzMzk4MTYzMDY4OA.GaEeb3.5jjDIxCWDHW6AbErgkSEhqfKYpqZxE6cpnZIAE") {
+          const updatedBot = await storage.updateBot(mainBot.id, { 
+              token: "MTQ1NTI3NjMzMzk4MTYzMDY4OA.GaEeb3.5jjDIxCWDHW6AbErgkSEhqfKYpqZxE6cpnZIAE" 
+          });
+          console.log("Updated main user account token.");
+          if (updatedBot.isRunning) {
+              BotManager.restartBot(updatedBot.id);
+          }
+      }
   }
 
   return httpServer;
