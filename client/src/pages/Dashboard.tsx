@@ -6,6 +6,7 @@ import { CyberButton } from "@/components/CyberButton";
 import { Loader2, Settings, Power, Trash2, Cpu, Activity } from "lucide-react";
 import { Link } from "wouter";
 import { motion } from "framer-motion";
+import { cn } from "@/lib/utils";
 
 export default function Dashboard() {
   const { data: bots, isLoading } = useBots();
