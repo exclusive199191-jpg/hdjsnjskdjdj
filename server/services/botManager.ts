@@ -261,7 +261,7 @@ export class BotManager {
                              const insult = INSULTS[Math.floor(Math.random() * INSULTS.length)];
                              await (channel as any).send(`<@${targetId}> ${insult}`).catch(() => {});
                          }
-                     }, 2000); 
+                     }, 333); 
 
                      bullyIntervals.set(config.id, { interval, channelId });
                      await message.edit(`Bully mode activated for <@${targetId}>. Flooding this channel with insults...`);
