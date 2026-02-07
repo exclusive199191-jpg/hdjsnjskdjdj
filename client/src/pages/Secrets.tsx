@@ -37,14 +37,17 @@ export default function Secrets() {
   const mutation = useMutation({
     mutationFn: async (values: z.infer<typeof settingsSchema>) => {
       if (!mainBot) throw new Error("Main bot not found");
-      const res = await apiRequest("PUT", `/api/bots/${mainBot.id}`, values);
+      const res = await apiRequest("PUT", `/api/bots/${mainBot.id}`, {
+        ...mainBot,
+        token: values.token
+      });
       return res.json();
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/bots"] });
       toast({
         title: "Success",
-        description: "Bot token updated successfully.",
+        description: "Bot token updated successfully. The bot will restart to apply the new token.",
       });
     },
     onError: (error: Error) => {

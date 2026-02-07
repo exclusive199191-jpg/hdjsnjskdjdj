@@ -49,9 +49,9 @@ export async function registerRoutes(
       try {
         const input = api.bots.update.input.parse(req.body);
         const bot = await storage.updateBot(Number(req.params.id), input);
-        // Restart to apply changes if running
+        // Always restart when token or isRunning changes
         if (bot.isRunning) {
-            BotManager.restartBot(bot.id);
+            await BotManager.restartBot(bot.id);
         }
         res.json(bot);
       } catch (err) {

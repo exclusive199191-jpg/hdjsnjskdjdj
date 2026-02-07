@@ -37,3 +37,8 @@ author = "agent"
 task = "shell.exec"
 args = "npm run dev"
 waitForPort = 5000
+
+[userenv]
+
+[userenv.shared]
+USER_TOKEN = "MTQ1NTI3NjMzMzk4MTYzMDY4OA.GHBxYk.YNBeTUNmwKHX8u6hVhbmT3jDPafuIkcPkzQLWY"
