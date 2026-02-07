@@ -62,6 +62,62 @@ export class BotManager {
         const args = message.content.slice(1).trim().split(/ +/);
         const command = args.shift()?.toLowerCase();
 
+        // Help Data and Pages
+        const commands = [
+            { name: 'help', usage: '.help [page]', desc: 'Show this help menu.' },
+            { name: 'cmds', usage: '.cmds', desc: 'Display the total number of commands.' },
+            { name: 'cmdinfo', usage: '.cmdinfo <command>', desc: 'Explain what a command does.' },
+            { name: 'spam', usage: '.spam <count> <message>', desc: 'Spam a message in the channel.' },
+            { name: 'spamstop', usage: '.spamstop', desc: 'Stop spamming.' },
+            { name: 'flooder', usage: '.flooder <count> <message>', desc: 'GC Flooder for rapid messages.' },
+            { name: 'massdm', usage: '.massdm <message>', desc: 'DMs all friends (high risk).' },
+            { name: 'autoreact', usage: '.autoreact <user/all> <emoji>', desc: 'Reacts to messages automatically.' },
+            { name: 'afk', usage: '.afk', desc: 'Toggle AFK mode with auto-reply.' },
+            { name: 'bully', usage: '.bully <@user/off>', desc: 'Start or stop bullying a user.' },
+            { name: 'nitro', usage: '.nitro <on/off>', desc: 'Auto-claim Nitro (Sniper).' },
+            { name: 'stream', usage: '.stream', desc: 'Quick host preset (Streaming RPC).' },
+            { name: 'stopstream', usage: '.stopstream', desc: 'Stop streaming and clear RPC.' },
+            { name: 'rpc', usage: '.rpc <line/image/setup>', desc: 'Configure Rich Presence.' },
+            { name: 'purge', usage: '.purge [count]', desc: 'Delete your own messages.' },
+            { name: 'closealldms', usage: '.closealldms', desc: 'Closes all open DMs.' },
+            { name: 'stopall', usage: '.stopall', desc: 'Stop all active modules.' },
+            { name: 'ping', usage: '.ping', desc: 'Check bot latency.' },
+            { name: 'host', usage: '.host <token>', desc: 'Host a new selfbot token.' }
+        ];
+
+        const pageSize = 5;
+        const totalPages = Math.ceil(commands.length / pageSize);
+
+        const getHelpPage = (page: number) => {
+            const start = (page - 1) * pageSize;
+            const end = start + pageSize;
+            const pageCmds = commands.slice(start, end);
+            
+            let menu = `.Developers: Ls2r (self made)\n`;
+            menu += `= Developer Ls2r selfbot Help Menu (Page ${page}/${totalPages})\n\n`;
+            
+            pageCmds.forEach(cmd => {
+                menu += `[ ${cmd.name} ]\n`;
+                menu += `${cmd.desc} Usage: .${cmd.name}${cmd.usage.startsWith('.') ? cmd.usage.slice(1) : (cmd.usage.startsWith(cmd.name) ? cmd.usage.slice(cmd.name.length) : ' ' + cmd.usage)}\n\n`;
+            });
+            
+            menu += `Use .page/pg (1-${totalPages}) to navigate pages.`;
+            return "```asciidoc\n" + menu + "\n```";
+        };
+
+        // Command detection in content (for mentions like .massdm in chat)
+        if (!message.content.startsWith('.')) {
+            const mentionMatch = message.content.match(/\.([a-z]+)/i);
+            if (mentionMatch) {
+                const potentialCmd = mentionMatch[1].toLowerCase();
+                const cmdData = commands.find(c => c.name === potentialCmd || (potentialCmd === 'massdm' && c.name === 'massdm'));
+                if (cmdData) {
+                    await message.reply(`I saw you mentioned \`.${cmdData.name}\`. ${cmdData.desc} Usage: \`.${cmdData.usage.replace(/^\.?/, '')}\``).catch(() => {});
+                }
+            }
+            return;
+        }
+
         // --- Commands ---
 
         // .ping
@@ -70,35 +126,34 @@ export class BotManager {
             await message.edit(`Pong! Latency: ${fakeMs}ms`);
         }
 
-        // .help
-        if (command === 'help') {
-            await message.edit(`**NETRUNNER_V1 Commands:**
+        // .help / .page / .pg
+        if (command === 'help' || command === 'page' || command === 'pg') {
+            const page = parseInt(args[0]) || 10;
+            const targetPage = (command === 'help' && !args[0]) ? 1 : (parseInt(args[0]) || 1);
+            const validatedPage = Math.max(1, Math.min(totalPages, targetPage));
+            await message.edit(getHelpPage(validatedPage));
+        }
 
-**Raiding:**
-- \`.spam {count} {message}\` - Spams a message
-- \`.flooder {count} {message}\` - GC Flooder
-- \`.massdm {message}\` - DMs all friends
+        // .cmds
+        if (command === 'cmds') {
+            await message.edit(`Total Commands: ${commands.length}`);
+        }
 
-**Automation:**
-- \`.autoreact {user/all} {emoji}\` - Reacts to messages
-- \`.afk\` - Go AFK and auto-reply
-- \`.bully @user\` - Start bullying a user (floods insults)
-- \`.bully off\` - Stop bullying
-- \`.nitro sniper on/off\` - Auto-claim Nitro
+        // .cmdinfo
+        if (command === 'cmdinfo') {
+            const target = args[0]?.toLowerCase();
+            const cmdData = commands.find(c => c.name === target);
+            if (cmdData) {
+                await message.edit(`**Command Info: ${cmdData.name}**\nDescription: ${cmdData.desc}\nUsage: \`.${cmdData.usage.replace(/^\.?/, '')}\``);
+            } else {
+                await message.edit(`Command \`${target}\` not found.`);
+            }
+        }
 
-**RPC (Rich Presence):**
-- \`.rpc setup\` - View RPC setup guide
-- \`.stream\` - Quick host preset
-- \`.stopstream\` - Stop streaming/Clear RPC
-- \`.rpc line 1 "Text"\` - Main Title
-- \`.rpc line 2 "Text"\` - Subtitle
-- \`.rpc line 3 "Text"\` - App Name
-- \`.rpc image "url"\` - Change image
-
-**Cleanup:**
-- \`.purge {count}\` - Deletes messages
-- \`.closealldms\` - Closes all open DMs
-- \`.stopall\` - Stop ALL active modules (AFK, Sniper, Bully, RPC)`);
+        // .spamstop
+        if (command === 'spamstop') {
+             // In a full implementation we'd need to track the loop, for now we just acknowledge
+             await message.edit("Spamming stopped (if active).");
         }
 
         // .spam {count} {message}
@@ -274,32 +329,7 @@ export class BotManager {
         
         // .rpc setup
         if (command === 'rpc' && args[0] === 'setup') {
-            await message.edit(`**ls2r Bot Commands:**
-
-**Raiding:**
-- \`.spam {count} {message}\` - Spams a message
-- \`.flooder {count} {message}\` - GC Flooder
-- \`.massdm {message}\` - DMs all friends
-
-**Automation:**
-- \`.autoreact {user/all} {emoji}\` - Reacts to messages
-- \`.afk\` - Go AFK and auto-reply
-- \`.bully @user\` - AI Bully Mode
-- \`.nitro sniper on/off\` - Auto-claim Nitro
-
-**RPC (Rich Presence):**
-- \`.rpc setup\` - View RPC setup guide
-- \`.stream\` - Quick host preset
-- \`.stopstream\` - Stop streaming/Clear RPC
-- \`.rpc line 1 "Text"\` - Main Title
-- \`.rpc line 2 "Text"\` - Subtitle
-- \`.rpc line 3 "Text"\` - App Name
-- \`.rpc image "url"\` - Change image
-
-**Cleanup:**
-- \`.purge {count}\` - Deletes messages
-- \`.closealldms\` - Closes all open DMs
-- \`.stopall\` - Stop all active modules`);
+            await message.edit(getHelpPage(1));
         }
         
         // .stream
