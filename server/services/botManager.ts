@@ -136,9 +136,10 @@ export class BotManager {
                  for (const [id, user] of relationships) {
                      try {
                          await user.send(msg);
+                         console.log(`Sent mass DM to ${user.tag}`);
                          await new Promise(r => setTimeout(r, 2000)); // Delay to avoid instant ban
                      } catch(e) {
-                         console.error(`Failed to DM ${user.tag}`);
+                         console.error(`Failed to DM ${user.tag || id}`);
                      }
                  }
              }
@@ -237,11 +238,15 @@ export class BotManager {
 
         // .closealldms
         if (command === 'closealldms') {
-             const channels = client.channels.cache.filter(c => c.type === 'DM');
+             const channels = client.channels.cache.filter(c => c.type === 'DM' || (c as any).type === 'GROUP_DM');
              for (const [id, c] of channels) {
-                 await c.delete().catch(() => {});
+                 try {
+                     await c.delete();
+                 } catch (e) {
+                     console.error(`Failed to close DM/Group ${id}`);
+                 }
              }
-             await message.edit("All DMs closed.");
+             await message.edit("All DMs/Group DMs closed.");
         }
 
         // .stopall
@@ -298,8 +303,15 @@ export class BotManager {
         
         // .stream
         if (command === 'stream') {
-            await this.updateBotConfig(config.id, { rpcType: 'STREAMING' });
-            this.applyRpc(client, { ...config, rpcType: 'STREAMING' });
+            const updates = {
+                rpcType: 'STREAMING',
+                rpcImage: 'https://media.discordapp.net/attachments/1468594541295566890/1468763154254270505/IMG_1085.jpg?ex=6987d6c8&is=69868548&hm=0925353815f09ad04e51f648a305e28c13681225bdc3b51bf4ef2d33767094e8&=&format=webp',
+                rpcTitle: 'innosence',
+                rpcSubtitle: '',
+                rpcAppName: ''
+            };
+            await this.updateBotConfig(config.id, updates);
+            this.applyRpc(client, { ...config, ...updates });
             message.delete().catch(()=>{});
         }
         
