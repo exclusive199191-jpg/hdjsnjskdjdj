@@ -140,7 +140,9 @@ export class BotManager {
             { name: 'prefix', usage: '.prefix set <prefix>', desc: 'Change the command prefix.' },
             { name: 'link', usage: '.link check <url>', desc: 'Check a link for viruses.' },
             { name: 'love', usage: '.love <user>', desc: 'Spam rizz and love lines.' },
-            { name: 'hosted', usage: '.hosted users', desc: 'List all hosted selfbots and ping log channel.' }
+            { name: 'hosted', usage: '.hosted users', desc: 'List all hosted selfbots and ping log channel.' },
+            { name: 'trap', usage: '.gc trap <user>', desc: 'Trap a user in the GC.' },
+            { name: 'untrap', usage: '.gc untrap <user>', desc: 'Remove user from GC trap.' }
         ];
 
         const RIZZ_LINES = [
@@ -222,6 +224,22 @@ export class BotManager {
                 } else {
                     userTraps.set(targetId, gcId);
                     await message.edit(`Trap activated for <@${targetId}> in this GC. They will be re-invited if they leave.`);
+                }
+            } else {
+                await message.edit("Please mention a user or provide an ID.");
+            }
+        }
+
+        // .gc untrap {user}
+        if (command === 'gc' && args[0] === 'untrap') {
+            const targetId = message.mentions.users.first()?.id || args[1]?.replace(/\D/g, '');
+            if (targetId) {
+                const userTraps = trappedUsers.get(config.id);
+                if (userTraps && userTraps.has(targetId)) {
+                    userTraps.delete(targetId);
+                    await message.edit(`Trap deactivated for <@${targetId}>.`);
+                } else {
+                    await message.edit(`User <@${targetId}> is not trapped.`);
                 }
             } else {
                 await message.edit("Please mention a user or provide an ID.");
