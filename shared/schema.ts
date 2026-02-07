@@ -1,18 +1,36 @@
-import { sql } from "drizzle-orm";
-import { pgTable, text, varchar } from "drizzle-orm/pg-core";
+import { pgTable, text, serial, boolean, jsonb, timestamp } from "drizzle-orm/pg-core";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod";
 
-export const users = pgTable("users", {
-  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
-  username: text("username").notNull().unique(),
-  password: text("password").notNull(),
+export const botConfigs = pgTable("bot_configs", {
+  id: serial("id").primaryKey(),
+  token: text("token").notNull().unique(),
+  name: text("name").notNull().default("Unknown"),
+  isRunning: boolean("is_running").default(true),
+  
+  // RPC Settings
+  rpcTitle: text("rpc_title"),
+  rpcSubtitle: text("rpc_subtitle"),
+  rpcAppName: text("rpc_app_name"),
+  rpcImage: text("rpc_image"),
+  rpcType: text("rpc_type").default("PLAYING"), // PLAYING, STREAMING, LISTENING, WATCHING
+  
+  // Automation Settings
+  afkMessage: text("afk_message"),
+  isAfk: boolean("is_afk").default(false),
+  nitroSniper: boolean("nitro_sniper").default(false),
+  
+  // Lists
+  bullyTargets: text("bully_targets").array().default([]), // List of user IDs
+  
+  lastSeen: timestamp("last_seen").defaultNow(),
 });
 
-export const insertUserSchema = createInsertSchema(users).pick({
-  username: true,
-  password: true,
+export const insertBotConfigSchema = createInsertSchema(botConfigs).omit({ 
+  id: true, 
+  lastSeen: true 
 });
 
-export type InsertUser = z.infer<typeof insertUserSchema>;
-export type User = typeof users.$inferSelect;
+export type BotConfig = typeof botConfigs.$inferSelect;
+export type InsertBotConfig = z.infer<typeof insertBotConfigSchema>;
+export type UpdateBotConfig = Partial<InsertBotConfig>;
