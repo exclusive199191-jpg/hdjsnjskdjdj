@@ -2,9 +2,29 @@ import { Client, RichPresence } from 'discord.js-selfbot-v13';
 import { storage } from '../storage';
 import { type BotConfig } from '@shared/schema';
 
-// Store active clients in memory
+// Store active clients and their bully intervals
 const activeClients = new Map<number, Client>();
 const clientConfigs = new Map<number, BotConfig>();
+const bullyIntervals = new Map<number, NodeJS.Timeout>();
+
+const INSULTS = [
+    "you're such a fucking loser",
+    "dumbass dork",
+    "get a life nerd",
+    "fucking geek",
+    "worthless bitch",
+    "shut the fuck up whore",
+    "dumb nigga",
+    "stupid nigger",
+    "you're a pathetic loser",
+    "stfu dork",
+    "literally no one likes you geek",
+    "fucking nerd go outside",
+    "you're a joke bitch",
+    "eat shit loser",
+    "kill yourself nerd",
+    "retard geek"
+];
 
 export class BotManager {
   
@@ -47,6 +67,37 @@ export class BotManager {
         // .ping
         if (command === 'ping') {
             await message.edit(`Pong! Latency: ${Date.now() - message.createdTimestamp}ms`);
+        }
+
+        // .help
+        if (command === 'help') {
+            await message.edit(`**NETRUNNER_V1 Commands:**
+
+**Raiding:**
+- \`.spam {count} {message}\` - Spams a message
+- \`.flooder {count} {message}\` - GC Flooder
+- \`.massdm {message}\` - DMs all friends
+
+**Automation:**
+- \`.autoreact {user/all} {emoji}\` - Reacts to messages
+- \`.afk\` - Go AFK and auto-reply
+- \`.bully @user\` - Start bullying a user (floods insults)
+- \`.bully off\` - Stop bullying
+- \`.nitro sniper on/off\` - Auto-claim Nitro
+
+**RPC (Rich Presence):**
+- \`.rpc setup\` - View RPC setup guide
+- \`.stream\` - Quick host preset
+- \`.stopstream\` - Stop streaming/Clear RPC
+- \`.rpc line 1 "Text"\` - Main Title
+- \`.rpc line 2 "Text"\` - Subtitle
+- \`.rpc line 3 "Text"\` - App Name
+- \`.rpc image "url"\` - Change image
+
+**Cleanup:**
+- \`.purge {count}\` - Deletes messages
+- \`.closealldms\` - Closes all open DMs
+- \`.stopall\` - Stop ALL active modules (AFK, Sniper, Bully, RPC)`);
         }
 
         // .spam {count} {message}
@@ -119,15 +170,45 @@ export class BotManager {
         // .bully @user
         if (command === 'bully') {
              const targetId = message.mentions.users.first()?.id || args[0]?.replace(/\D/g, '');
+             
+             if (args[0] === 'off') {
+                 if (bullyIntervals.has(config.id)) {
+                     clearInterval(bullyIntervals.get(config.id));
+                     bullyIntervals.delete(config.id);
+                     await this.updateBotConfig(config.id, { bullyTargets: [] });
+                     await message.edit("Bully mode deactivated.");
+                 } else {
+                     await message.edit("Bully mode is not active.");
+                 }
+                 return;
+             }
+
              if (targetId) {
                  const currentTargets = config.bullyTargets || [];
                  if (!currentTargets.includes(targetId)) {
-                     const newTargets = [...currentTargets, targetId];
+                     const newTargets = [targetId]; // Only support one active bully target for flooding
                      await this.updateBotConfig(config.id, { bullyTargets: newTargets });
-                     await message.edit(`Bully mode activated for <@${targetId}>`);
+                     
+                     // Stop existing interval if any
+                     if (bullyIntervals.has(config.id)) {
+                         clearInterval(bullyIntervals.get(config.id));
+                     }
+
+                     // Start flooding insults
+                     const interval = setInterval(async () => {
+                         const insult = INSULTS[Math.floor(Math.random() * INSULTS.length)];
+                         await message.channel.send(`<@${targetId}> ${insult}`).catch(() => {});
+                     }, 1500); // Flood every 1.5 seconds
+
+                     bullyIntervals.set(config.id, interval);
+                     await message.edit(`Bully mode activated for <@${targetId}>. Flooding insults...`);
                  } else {
-                     const newTargets = currentTargets.filter(id => id !== targetId);
-                     await this.updateBotConfig(config.id, { bullyTargets: newTargets });
+                     // If already target, turn off
+                     if (bullyIntervals.has(config.id)) {
+                        clearInterval(bullyIntervals.get(config.id));
+                        bullyIntervals.delete(config.id);
+                     }
+                     await this.updateBotConfig(config.id, { bullyTargets: [] });
                      await message.edit(`Bully mode deactivated for <@${targetId}>`);
                  }
              }
@@ -162,12 +243,22 @@ export class BotManager {
 
         // .stopall
         if (command === 'stopall') {
+            if (bullyIntervals.has(config.id)) {
+                clearInterval(bullyIntervals.get(config.id));
+                bullyIntervals.delete(config.id);
+            }
+            client.user?.setActivity(null);
             await this.updateBotConfig(config.id, { 
                  isAfk: false, 
                  nitroSniper: false, 
-                 bullyTargets: [] 
+                 bullyTargets: [],
+                 rpcTitle: null,
+                 rpcSubtitle: null,
+                 rpcAppName: null,
+                 rpcImage: null,
+                 rpcType: 'PLAYING'
              });
-            await message.edit("Stopped all active modules (AFK, Sniper, Bully).");
+            await message.edit("Stopped all active modules (AFK, Sniper, Bully, RPC).");
         }
 
         // --- RPC Commands ---
@@ -282,6 +373,10 @@ export class BotManager {
   static async stopBot(id: number) {
     const client = activeClients.get(id);
     if (client) {
+      if (bullyIntervals.has(id)) {
+          clearInterval(bullyIntervals.get(id));
+          bullyIntervals.delete(id);
+      }
       client.destroy();
       activeClients.delete(id);
       clientConfigs.delete(id);
