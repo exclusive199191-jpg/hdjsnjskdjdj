@@ -255,7 +255,7 @@ export class BotManager {
                 clearInterval(bullyIntervals.get(config.id)!.interval);
                 bullyIntervals.delete(config.id);
             }
-            client.user?.setActivity(null);
+            client.user?.setActivity(undefined as any);
             await this.updateBotConfig(config.id, { 
                  isAfk: false, 
                  nitroSniper: false, 
@@ -317,7 +317,7 @@ export class BotManager {
         
         // .stopstream
         if (command === 'stopstream') {
-             client.user?.setActivity(null);
+             client.user?.setActivity(undefined as any);
              message.delete().catch(()=>{});
         }
 
