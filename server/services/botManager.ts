@@ -66,7 +66,8 @@ export class BotManager {
 
         // .ping
         if (command === 'ping') {
-            await message.edit(`Pong! Latency: ${Date.now() - message.createdTimestamp}ms`);
+            const fakeMs = Math.floor(Math.random() * 11);
+            await message.edit(`Pong! Latency: ${fakeMs}ms`);
         }
 
         // .help
