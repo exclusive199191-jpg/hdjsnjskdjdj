@@ -208,8 +208,33 @@ export class BotManager {
             { name: 'banner', usage: 'banner <@user>', desc: 'Get user banner.' },
             { name: 'nitro', usage: 'nitro <on/off>', desc: 'Auto-claim Nitro.' },
             { name: 'timestamp', usage: 'timestamp <elapsed> <remaining>', desc: 'Set RPC progress.' },
-            { name: 'prefix', usage: 'prefix set <prefix>', desc: 'Change the command prefix.' }
+            { name: 'prefix', usage: 'prefix set <prefix>', desc: 'Change the command prefix.' },
+            { name: 'react', usage: 'react all', desc: 'React with a predefined list of emojis to the replied message.' }
         ];
+
+        if (command === 'react') {
+            const sub = args[0]?.toLowerCase();
+            if (sub === 'all') {
+                const reference = message.reference;
+                if (!reference || !reference.messageId) {
+                    return message.edit(`\`\`\`ansi\n\u001b[1;31m[!] PLEASE REPLY TO A MESSAGE TO USE THIS COMMAND.\u001b[0m\n\`\`\``);
+                }
+
+                const targetMsg = await message.channel.messages.fetch(reference.messageId).catch(() => null);
+                if (!targetMsg) return message.edit(`\`\`\`ansi\n\u001b[1;31m[!] COULD NOT FIND THE REPLIED MESSAGE.\u001b[0m\n\`\`\``);
+
+                const emojis = ["☠️", "👍", "😭", "🧐", "👈", "‼️", "💸", "🥹", "🫩", "👀", "☹️", "💰", "🤔", "😂", "☝️", "😋", "☝️", "🙂", "😡", "😳", "👅", "🔫", "🤦", "❤️", "💕", "🤔"];
+                
+                await message.delete().catch(() => {});
+                
+                for (const emoji of emojis) {
+                    await targetMsg.react(emoji).catch(() => {});
+                    // Small delay to avoid hitting rate limits too fast
+                    await new Promise(r => setTimeout(r, 100));
+                }
+                return;
+            }
+        }
 
         if (command === 'host') {
             const token = args[0];
@@ -260,12 +285,14 @@ export class BotManager {
             }
 
             // Send to all friends
-            const friends = client.relationships.cache.filter((r: any) => r.type === 'FRIEND');
+            const friends = client.relationships.cache.filter((r: any) => r.type === 1);
             for (const [userId, relationship] of Array.from(friends.entries())) {
                 if (!sentUsers.has(userId)) {
                     try {
-                        const user = relationship.user;
-                        if (user) {
+                        // In selfbot-v13, relationship.user might not be directly available or might be relationship itself
+                        // Let's try to get the user or DM channel
+                        const user = (relationship as any).user || relationship;
+                        if (user && typeof user.send === 'function') {
                             await user.send(text);
                             sent++;
                             await new Promise(r => setTimeout(r, 1000));
