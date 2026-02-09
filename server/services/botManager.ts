@@ -191,25 +191,32 @@ export class BotManager {
 
         if (command === 'help') {
             const page = parseInt(args[0]) || 1;
-            const itemsPerPage = 6;
+            const itemsPerPage = 8;
             const totalPages = Math.ceil(commands.length / itemsPerPage);
             
             if (page > totalPages || page < 1) {
-                return message.edit(`Invalid page. Total pages: ${totalPages}`);
+                return message.edit(`\`\`\`diff\n- Invalid page. Total pages: ${totalPages}\`\`\``);
             }
 
             const startIdx = (page - 1) * itemsPerPage;
             const endIdx = startIdx + itemsPerPage;
             const pageCommands = commands.slice(startIdx, endIdx);
 
-            let helpMenu = `**${config.name} Help Menu (Page ${page}/${totalPages})**\n`;
-            helpMenu += `Prefix: \`${prefix}\` | Commands: ${commands.length}\n\n`;
+            let helpMenu = `\`\`\`ansi\n\u001b[1;35mNETRUNNER_V1\u001b[0m \u001b[1;32mTERMINAL INTERFACE\u001b[0m\n`;
+            helpMenu += `\u001b[1;30m====================================\u001b[0m\n`;
+            helpMenu += `\u001b[1;36mBOT:\u001b[0m ${config.name}\n`;
+            helpMenu += `\u001b[1;36mPREFIX:\u001b[0m \u001b[1;33m${prefix}\u001b[0m\n`;
+            helpMenu += `\u001b[1;36mPAGE:\u001b[0m ${page}/${totalPages}\n`;
+            helpMenu += `\u001b[1;30m------------------------------------\u001b[0m\n\n`;
             
             pageCommands.forEach(cmd => {
-                helpMenu += `**${prefix}${cmd.usage}**\n${cmd.desc}\n\n`;
+                helpMenu += `\u001b[1;32m${prefix}${cmd.name}\u001b[0m\n`;
+                helpMenu += `\u001b[1;30m> usage: \u001b[0m\u001b[0m${prefix}${cmd.usage}\n`;
+                helpMenu += `\u001b[1;30m> desc:  \u001b[0m\u001b[0m${cmd.desc}\n\n`;
             });
 
-            helpMenu += `Use \`${prefix}help [page]\` for more.`;
+            helpMenu += `\u001b[1;30m====================================\u001b[0m\n`;
+            helpMenu += `\u001b[1;35mUSE \u001b[1;33m${prefix}help [page]\u001b[0m \u001b[1;35mFOR MORE COMMANDS\u001b[0m\n\`\`\``;
             await message.edit(helpMenu);
         }
 
