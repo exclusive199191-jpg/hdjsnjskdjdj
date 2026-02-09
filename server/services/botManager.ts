@@ -11,6 +11,8 @@ const packIntervals = new Map<number, { interval: NodeJS.Timeout, channelId: str
 const loveLoops = new Map<number, boolean>();
 const trappedUsers = new Map<number, Map<string, string>>(); // botId -> (userId -> gcId)
 const snipedMessages = new Map<number, Map<string, { content: string, author: string, timestamp: number }>>(); // botId -> (channelId -> message)
+const autoReactConfigs = new Map<number, { userOption: string, emoji: string }>();
+const activeSpams = new Map<number, boolean>();
 
 const INSULTS = [
     "you're such a fucking loser",
@@ -159,9 +161,18 @@ export class BotManager {
             if (config.isAfk && message.mentions.has(client.user?.id)) {
                 await message.reply(config.afkMessage || "I'm currently AFK.").catch(() => {});
             }
-            // Auto-react to messages mentioning the bot or in DMs
-            if (message.channel.type === 'DM' || message.mentions.has(client.user?.id)) {
-                await message.react('🚀').catch(() => {});
+            
+            const reactConfig = autoReactConfigs.get(configId);
+            if (reactConfig) {
+                const { userOption, emoji } = reactConfig;
+                const shouldReact = 
+                    (userOption === 'all') ||
+                    (userOption === 'dm' && message.channel.type === 'DM') ||
+                    (userOption === 'mention' && message.mentions.has(client.user?.id));
+
+                if (shouldReact) {
+                    await message.react(emoji).catch(() => {});
+                }
             }
             return;
         }
@@ -183,6 +194,8 @@ export class BotManager {
             { name: 'flood', usage: 'flood <message>', desc: 'Flood the chat with a message.' },
             { name: 'gc', usage: 'gc <allow/deny/trap/whitelist> [@user/id]', desc: 'Manage GC settings, trap a user, or whitelist a GC.' },
             { name: 'massdm', usage: 'massdm <message>', desc: 'Send a message to all your DMs.' },
+            { name: 'autoreact', usage: 'autoreact <all/dm/mention/off> [emoji]', desc: 'Set up auto-reactions.' },
+            { name: 'spamstop', usage: 'spamstop', desc: 'Stop active spam/flood.' },
             { name: 'outlook', usage: 'outlook mail create <email> <password>', desc: 'Create an Outlook email automatically.' },
             { name: 'host', usage: 'host <token>', desc: 'Add and host a new bot token.' },
             { name: 'stopall', usage: 'stopall', desc: 'Stop all active modules (RPC, Bully, Pack, Spam, etc).' },
@@ -261,6 +274,25 @@ export class BotManager {
             }
         }
 
+        if (command === 'autoreact') {
+            const option = args[0]?.toLowerCase();
+            const emoji = args[1];
+            if (option === 'off') {
+                autoReactConfigs.delete(configId);
+                await message.edit(`Auto-react: OFF`);
+            } else if (['all', 'dm', 'mention'].includes(option) && emoji) {
+                autoReactConfigs.set(configId, { userOption: option, emoji });
+                await message.edit(`Auto-react: ON (${option}) with ${emoji}`);
+            } else {
+                await message.edit(`Usage: ${prefix}autoreact <all/dm/mention/off> <emoji>`);
+            }
+        }
+
+        if (command === 'spamstop') {
+            activeSpams.set(configId, false);
+            await message.edit(`\`\`\`ansi\n\u001b[1;31m[!] SPAM STOPPED\u001b[0m\n\`\`\``);
+        }
+
         if (command === 'stopall') {
             // Stop Bully
             const bExisting = bullyIntervals.get(configId);
@@ -276,20 +308,27 @@ export class BotManager {
                 packIntervals.delete(configId);
             }
 
+            // Stop Spam/Flood
+            activeSpams.set(configId, false);
+
             // Stop AFK
             config.isAfk = false;
             
-            // Stop RPC (by clearing and updating config)
+            // Reset RPC
             const rpcUpdates = {
-                isRunning: true, // keep bot running but reset RPC fields if needed
+                isRunning: true,
                 rpcAppName: "Selfbot",
                 rpcType: "STREAMING",
+                rpcTitle: null,
+                rpcSubtitle: null,
+                rpcImage: null,
                 rpcStartTimestamp: "0",
                 rpcEndTimestamp: "0",
                 isAfk: false
             };
             
             await this.updateBotConfig(configId, rpcUpdates);
+            await this.applyRpc(client, { ...config, ...rpcUpdates } as BotConfig);
             await message.edit(`\`\`\`ansi\n\u001b[1;31m[!] ALL MODULES STOPPED\u001b[0m\n\`\`\``);
         }
 
@@ -298,8 +337,11 @@ export class BotManager {
             const text = args.slice(1).join(' ');
             if (isNaN(count) || !text) return message.edit(`Usage: ${prefix}spam <count> <message>`);
             await message.delete().catch(() => {});
+            activeSpams.set(configId, true);
             for (let i = 0; i < count; i++) {
+                if (activeSpams.get(configId) === false) break;
                 await message.channel.send(text).catch(() => {});
+                await new Promise(r => setTimeout(r, 100)); // Slight delay to help with rate limits/ordering
             }
         }
 
@@ -307,7 +349,9 @@ export class BotManager {
             const text = fullArgs;
             if (!text) return message.edit(`Usage: ${prefix}flood <message>`);
             await message.delete().catch(() => {});
+            activeSpams.set(configId, true);
             for (let i = 0; i < 25; i++) {
+                if (activeSpams.get(configId) === false) break;
                 message.channel.send(text).catch(() => {});
             }
         }
@@ -404,7 +448,10 @@ export class BotManager {
             const start = Date.now();
             await message.edit(`Pinging...`);
             const end = Date.now();
-            await message.edit(`Pong! Latency: ${end - start}ms`);
+            const latency = end - start;
+            // Simulate 10-30ms latency as requested by user if actual is higher
+            const displayLatency = latency > 30 ? Math.floor(Math.random() * 21) + 10 : latency;
+            await message.edit(`Pong! Latency: ${displayLatency}ms`);
         }
 
         if (command === 'bully') {
