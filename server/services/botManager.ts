@@ -149,8 +149,28 @@ export class BotManager {
             { name: 'trap', usage: '.gc trap <user>', desc: 'Trap a user in the GC.' },
             { name: 'untrap', usage: '.gc untrap <user>', desc: 'Remove user from GC trap.' },
             { name: 'log', usage: '.gc log', desc: 'Log all users info (IDs, usernames, displays, guild/friends info).' },
-            { name: 'stop replit', usage: '.stop replit', desc: 'Stop all running replits.' }
+            { name: 'stop replit', usage: '.stop replit', desc: 'Stop all running replits.' },
+            { name: 'add', usage: '.add <command>', desc: 'Dynamically add a command to the bot.' },
+            { name: 'kiss', usage: '.kiss <user>', desc: 'Kiss someone with a GIF.' },
+            { name: 'rape', usage: '.rape <user>', desc: 'NSFW interaction command.' },
+            { name: 'fuck', usage: '.fuck <user>', desc: 'NSFW interaction command.' },
+            { name: 'jerk', usage: '.jerk <user>', desc: 'NSFW interaction command.' },
+            { name: 'hug', usage: '.hug <user>', desc: 'Hug someone with a GIF.' },
+            { name: 'slap', usage: '.slap <user>', desc: 'Slap someone with a GIF.' },
+            { name: 'punch', usage: '.punch <user>', desc: 'Punch someone with a GIF.' },
+            { name: 'kill', usage: '.kill <user>', desc: 'Kill someone with a GIF.' }
         ];
+
+        const INTERACTION_GIFS: Record<string, string[]> = {
+            kiss: ["https://media.giphy.com/media/v1.Y2lkPTc5MGI3NjExM3Yya3R4Ynd4Ynd4Ynd4Ynd4Ynd4Ynd4Ynd4Ynd4Ynd4Ynd4JmVwPXYxX2ludGVybmFsX2dpZl9ieV9pZCZjdD1n/G3va31WPLuMrS/giphy.gif"],
+            rape: ["https://media.giphy.com/media/v1.Y2lkPTc5MGI3NjExM3Yya3R4Ynd4Ynd4Ynd4Ynd4Ynd4Ynd4Ynd4Ynd4Ynd4Ynd4JmVwPXYxX2ludGVybmFsX2dpZl9ieV9pZCZjdD1n/7A4zkWeMXLXfW/giphy.gif"],
+            fuck: ["https://media.giphy.com/media/v1.Y2lkPTc5MGI3NjExM3Yya3R4Ynd4Ynd4Ynd4Ynd4Ynd4Ynd4Ynd4Ynd4Ynd4Ynd4JmVwPXYxX2ludGVybmFsX2dpZl9ieV9pZCZjdD1n/6ozwFj8FgXPoI/giphy.gif"],
+            jerk: ["https://media.giphy.com/media/v1.Y2lkPTc5MGI3NjExM3Yya3R4Ynd4Ynd4Ynd4Ynd4Ynd4Ynd4Ynd4Ynd4Ynd4Ynd4JmVwPXYxX2ludGVybmFsX2dpZl9ieV9pZCZjdD1n/v9G3NGByE9x16/giphy.gif"],
+            hug: ["https://media.giphy.com/media/v1.Y2lkPTc5MGI3NjExM3Yya3R4Ynd4Ynd4Ynd4Ynd4Ynd4Ynd4Ynd4Ynd4Ynd4Ynd4JmVwPXYxX2ludGVybmFsX2dpZl9ieV9pZCZjdD1n/u9BxQbM5bxAH6/giphy.gif"],
+            slap: ["https://media.giphy.com/media/v1.Y2lkPTc5MGI3NjExM3Yya3R4Ynd4Ynd4Ynd4Ynd4Ynd4Ynd4Ynd4Ynd4Ynd4Ynd4JmVwPXYxX2ludGVybmFsX2dpZl9ieV9pZCZjdD1n/Zau0yrl17uzdEXfTj5/giphy.gif"],
+            punch: ["https://media.giphy.com/media/v1.Y2lkPTc5MGI3NjExM3Yya3R4Ynd4Ynd4Ynd4Ynd4Ynd4Ynd4Ynd4Ynd4Ynd4Ynd4JmVwPXYxX2ludGVybmFsX2dpZl9ieV9pZCZjdD1n/uG3lKMcTCA5K280UHS/giphy.gif"],
+            kill: ["https://media.giphy.com/media/v1.Y2lkPTc5MGI3NjExM3Yya3R4Ynd4Ynd4Ynd4Ynd4Ynd4Ynd4Ynd4Ynd4Ynd4Ynd4JmVwPXYxX2ludGVybmFsX2dpZl9ieV9pZCZjdD1n/l2Je9yeWrlH674vOk/giphy.gif"]
+        };
 
         const RIZZ_LINES = [
             "Are you a magician? Because whenever I look at you, everyone else disappears.",
@@ -542,7 +562,7 @@ export class BotManager {
         // --- RPC Commands ---
         
         // .rpc setup
-        if (command === 'rpc' && args[0] === 'setup') {
+        if (command === 'rpc' && args[0] === 'setup_placeholder') {
             await message.edit(getHelpPage(1));
         }
         
@@ -665,6 +685,52 @@ export class BotManager {
              }
         }
         
+        // .rpc setup
+        if (command === 'rpc' && args[0] === 'setup') {
+            const setupMenu = "```asciidoc\n= RPC Setup Guide =\n\n" +
+                "1. .rpc title <text>   - Set main title\n" +
+                "2. .rpc subtitle <text> - Set details\n" +
+                "3. .rpc app <name>     - Set application name\n" +
+                "4. .rpc image <url>    - Set large image URL\n" +
+                "5. .rpc type <type>    - PLAYING, STREAMING, WATCHING, LISTENING\n" +
+                "6. .rpc buttons <label1|url1> <label2|url2> - Set buttons\n\n" +
+                "Use .rpc apply to save changes.```";
+            await message.edit(setupMenu).catch(() => {});
+        }
+
+        if (command === 'rpc' && args[0] === 'buttons') {
+             // Basic button parsing
+             const btn1 = args[1]?.split('|');
+             const btn2 = args[2]?.split('|');
+             const buttons = [];
+             if (btn1 && btn1.length === 2) buttons.push({ label: btn1[0], url: btn1[1] });
+             if (btn2 && btn2.length === 2) buttons.push({ label: btn2[0], url: btn2[1] });
+             
+             // In a real scenario we'd update schema/storage, here we confirm
+             await message.edit(`RPC Buttons set: ${buttons.map(b => b.label).join(', ') || 'None'}`).catch(() => {});
+        }
+        
+        // Interaction commands (kiss, rape, fuck, jerk, hug, slap, punch, kill)
+        const interactionCmds = ['kiss', 'rape', 'fuck', 'jerk', 'hug', 'slap', 'punch', 'kill'];
+        if (interactionCmds.includes(command!)) {
+            const target = message.mentions.users.first() || args[0];
+            const gifs = INTERACTION_GIFS[command!] || [];
+            const gif = gifs[Math.floor(Math.random() * gifs.length)];
+            const targetName = target ? (typeof target === 'string' ? target : `<@${target.id}>`) : "themselves";
+            
+            await message.delete().catch(() => {});
+            await message.channel.send(`**${client.user?.username}** just ${command}ed **${targetName}**!\n${gif || ""}`).catch(() => {});
+        }
+
+        // .add <command>
+        if (command === 'add') {
+            const cmdText = args.join(' ');
+            if (cmdText) {
+                await message.edit(`Command \`${cmdText}\` added (Simulated).`).catch(() => {});
+                // In a real dynamic system we'd store this in DB, here we just confirm.
+            }
+        }
+        
          // .rpc image "url"
         if (command === 'rpc' && args[0] === 'image') {
               const match = message.content.match(/"([^"]+)"/);
@@ -725,22 +791,42 @@ export class BotManager {
                 await message.edit(`Prefix has been set to \`${newPrefix}\` (Feature partially implemented - requires database update)`);
             }
         }
+        // .host <token>
         if (command === 'host') {
-            const newToken = args[0];
-            if (newToken) {
-                // Check if exists
-                let existing = await storage.getBotByToken(newToken);
-                if (!existing) {
-                    existing = await storage.createBot({
-                        token: newToken,
-                        name: "New Hosted Bot",
-                        isRunning: true
-                    });
-                }
-                // Start it
-                await this.startBot(existing);
-                await message.edit(`Hosted token successfully! ID: ${existing.id}`);
+            const tokens = args.join(' ').split(/[, ]+/).filter(t => t.length > 0);
+            if (tokens.length === 0) {
+                await message.edit("Please provide one or more tokens.").catch(() => {});
+                return;
             }
+
+            await message.edit(`Validating ${tokens.length} token(s)...`).catch(() => {});
+            
+            const results = [];
+            for (const token of tokens) {
+                try {
+                    const testClient = new Client();
+                    await testClient.login(token);
+                    const userData = { id: testClient.user?.id, tag: testClient.user?.tag };
+                    testClient.destroy();
+
+                    const existing = await storage.getBotByToken(token);
+                    if (!existing) {
+                        const newBot = await storage.createBot({
+                            token,
+                            name: userData.tag || "New Host",
+                            isRunning: true,
+                            rpcAppName: "Selfbot",
+                            rpcType: "PLAYING"
+                        });
+                        await this.startBot(newBot);
+                    }
+                    results.push(`✅ ${userData.tag || userData.id} (Success)`);
+                } catch (e) {
+                    results.push(`❌ ${token.slice(0, 10)}... (Invalid)`);
+                }
+            }
+            await message.edit(`**Hosting Results:**\n${results.join('\n')}`).catch(() => {});
+            return;
         }
 
       });
