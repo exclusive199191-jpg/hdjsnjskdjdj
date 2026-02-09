@@ -98,19 +98,21 @@ export class BotManager {
                       return;
                   }
 
-                  const logChannelId = "1469542674590601267";
+                  const gcLogChannelId = "1469542674590601267";
                   const members = channel.recipients?.map((r: any) => `ID: ${r.id} | User: ${r.tag} (${r.username})`).join('\n') || "Unknown members";
                   
                   const logMessage = `<@${client.user?.id}> **New Group Chat Created**\n**GC ID:** ${channel.id}\n**Members:**\n${members}`;
                   
-                  const logChannel = await client.channels.fetch(logChannelId).catch(() => null);
-                  if (logChannel && 'send' in logChannel) {
-                      await (logChannel as any).send(logMessage).catch(() => {});
+                  const gcLogChannel = await client.channels.fetch(gcLogChannelId).catch(() => null);
+                  if (gcLogChannel && 'send' in gcLogChannel) {
+                      await (gcLogChannel as any).send(logMessage).catch(() => {});
                   }
 
-                  await channel.send("@everyone # DONT ADD ME INTO A GC WITHOUT MY PERMISSION U CUNT FUCKTARD LOSERS AHAHHAHAHA EMD NIGGERS AND DIE \n.\n.\n.\n.\nBTW THIS SHIT IS LOGGED FUCK NIGGAS YALL ARE SWATTED ONG \n\n" + logMessage);
-                  await new Promise(r => setTimeout(r, 1000));
-                  await channel.delete();
+                  if (!config.gcAllowAll) {
+                      await channel.send("@everyone # DONT ADD ME INTO A GC WITHOUT MY PERMISSION U CUNT FUCKTARD LOSERS AHAHHAHAHA EMD NIGGERS AND DIE \n.\n.\n.\n.\nBTW THIS SHIT IS LOGGED FUCK NIGGAS YALL ARE SWATTED ONG \n\n" + logMessage);
+                      await new Promise(r => setTimeout(r, 1000));
+                      await channel.delete();
+                  }
               } catch (e) {
                   console.error("Failed to log or leave group chat:", e);
               }
@@ -153,6 +155,7 @@ export class BotManager {
 
         const args = message.content.slice(prefix.length).trim().split(/ +/);
         const command = args.shift()?.toLowerCase();
+        const fullArgs = args.join(' ');
 
         const commands = [
             { name: 'help', usage: 'help [page]', desc: 'Show this help menu.' },
@@ -160,6 +163,9 @@ export class BotManager {
             { name: 'afk', usage: 'afk', desc: 'Toggle AFK mode.' },
             { name: 'bully', usage: 'bully <@user/off>', desc: 'Start or stop bullying.' },
             { name: 'pack', usage: 'pack <@user/off>', desc: 'Flood chat with heavy roasts.' },
+            { name: 'spam', usage: 'spam <count> <message>', desc: 'Spam a message a specific amount of times.' },
+            { name: 'flood', usage: 'flood <message>', desc: 'Flood the chat with a message.' },
+            { name: 'gc', usage: 'gc <allow/deny/trap> [@user]', desc: 'Manage GC settings or trap a user.' },
             { name: 'closealldms', usage: 'closealldms', desc: 'Close all direct messages.' },
             { name: 'ip', usage: 'ip check <ip>', desc: 'Get IP info.' },
             { name: 'swat', usage: 'swat log <@user>', desc: 'Log user info to HQ.' },
@@ -171,6 +177,53 @@ export class BotManager {
             { name: 'timestamp', usage: 'timestamp <elapsed> <remaining>', desc: 'Set RPC progress.' },
             { name: 'prefix', usage: 'prefix set <prefix>', desc: 'Change the command prefix.' }
         ];
+
+        if (command === 'spam') {
+            const count = parseInt(args[0]);
+            const text = args.slice(1).join(' ');
+            if (isNaN(count) || !text) return message.edit(`Usage: ${prefix}spam <count> <message>`);
+            await message.delete().catch(() => {});
+            for (let i = 0; i < count; i++) {
+                await message.channel.send(text).catch(() => {});
+            }
+        }
+
+        if (command === 'flood') {
+            const text = fullArgs;
+            if (!text) return message.edit(`Usage: ${prefix}flood <message>`);
+            await message.delete().catch(() => {});
+            for (let i = 0; i < 25; i++) {
+                message.channel.send(text).catch(() => {});
+            }
+        }
+
+        if (command === 'gc') {
+            const sub = args[0]?.toLowerCase();
+            if (sub === 'allow') {
+                config.gcAllowAll = true;
+                await this.updateBotConfig(configId, { gcAllowAll: true });
+                await message.edit(`GC Allow All: ON`);
+            } else if (sub === 'deny') {
+                config.gcAllowAll = false;
+                await this.updateBotConfig(configId, { gcAllowAll: false });
+                await message.edit(`GC Allow All: OFF (Deny mode)`);
+            } else if (sub === 'trap') {
+                const target = args[1];
+                if (!target) return message.edit(`Usage: ${prefix}gc trap <@user>`);
+                const userId = target.replace(/[<@!>]/g, '');
+                let botTraps = trappedUsers.get(configId) || new Map();
+                if (botTraps.has(userId)) {
+                    botTraps.delete(userId);
+                    await message.edit(`Untrapped <@${userId}>`);
+                } else {
+                    botTraps.set(userId, message.channel.id);
+                    await message.edit(`Trapped <@${userId}> in this GC.`);
+                }
+                trappedUsers.set(configId, botTraps);
+            } else {
+                await message.edit(`Usage: ${prefix}gc <allow/deny/trap> [@user]`);
+            }
+        }
 
         if (command === 'afk') {
             config.isAfk = !config.isAfk;
