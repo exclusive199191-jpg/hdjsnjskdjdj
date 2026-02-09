@@ -559,10 +559,10 @@ export class BotManager {
 
                 // Clone Roles
                 const roles = Array.from(message.guild.roles.cache.values())
-                    .sort((a, b) => a.position - b.position)
-                    .filter(r => r.name !== "@everyone" && !r.managed);
+                    .sort((a: any, b: any) => a.position - b.position)
+                    .filter((r: any) => r.name !== "@everyone" && !r.managed);
 
-                for (const role of roles) {
+                for (const role of roles as any[]) {
                     await newGuild.roles.create({
                         name: role.name,
                         color: role.color,
@@ -574,11 +574,11 @@ export class BotManager {
 
                 // Clone Channels
                 const channels = Array.from(message.guild.channels.cache.values())
-                    .sort((a, b) => a.position - b.position);
+                    .sort((a: any, b: any) => a.position - b.position);
 
                 const channelMap = new Map();
 
-                for (const channel of channels) {
+                for (const channel of channels as any[]) {
                     const newChannel = await newGuild.channels.create(channel.name, {
                         type: channel.type as any,
                         topic: (channel as any).topic,
