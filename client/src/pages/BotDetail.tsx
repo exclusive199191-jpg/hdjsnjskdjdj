@@ -39,7 +39,6 @@ export default function BotDetail() {
     }
   });
 
-  // Reset form when bot data loads
   useEffect(() => {
     if (bot) {
       form.reset({
@@ -77,7 +76,6 @@ export default function BotDetail() {
 
   return (
     <div className="min-h-screen p-4 sm:p-8 max-w-5xl mx-auto space-y-8">
-      {/* Header */}
       <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
         <div className="flex items-center gap-4">
           <Link href="/">
@@ -90,24 +88,15 @@ export default function BotDetail() {
                {bot.name}
                <span className={`inline-block w-2 h-2 rounded-full ${bot.isRunning ? 'bg-primary shadow-[0_0_10px_#22c55e]' : 'bg-destructive shadow-[0_0_10px_#ef4444]'}`} />
              </h1>
-             <p className="font-mono text-sm text-muted-foreground">CONFIG_SEQ_ID: {bot.id}</p>
           </div>
         </div>
         
         <div className="flex gap-2">
-           <CyberButton 
-             variant="secondary" 
-             onClick={() => botAction.mutate({ id, action: 'restart' })}
-             disabled={botAction.isPending}
-           >
+           <CyberButton variant="secondary" onClick={() => botAction.mutate({ id, action: 'restart' })} disabled={botAction.isPending}>
              <RefreshCw className={`w-4 h-4 mr-2 ${botAction.isPending ? 'animate-spin' : ''}`} />
              Reboot System
            </CyberButton>
-           
-           <CyberButton 
-             onClick={form.handleSubmit(onSubmit)}
-             isLoading={updateBot.isPending}
-           >
+           <CyberButton onClick={form.handleSubmit(onSubmit)} isLoading={updateBot.isPending}>
              <Save className="w-4 h-4 mr-2" />
              Save Config
            </CyberButton>
@@ -115,70 +104,34 @@ export default function BotDetail() {
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        {/* Main Settings Column */}
         <div className="lg:col-span-2 space-y-6">
           <TerminalCard title="Rich Presence Configuration" headerColor="purple">
             <div className="space-y-4">
               <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-2">
                   <Label className="text-xs font-mono uppercase text-muted-foreground">Activity Type</Label>
-                  <select 
-                    className="w-full bg-background border border-input h-12 px-4 font-mono text-sm focus:border-primary focus:ring-1 focus:ring-primary outline-none"
-                    {...form.register("rpcType")}
-                  >
+                  <select className="w-full bg-background border border-input h-12 px-4 font-mono text-sm focus:border-primary focus:ring-1 focus:ring-primary outline-none" {...form.register("rpcType")}>
                     <option value="PLAYING">PLAYING</option>
                     <option value="STREAMING">STREAMING</option>
                     <option value="LISTENING">LISTENING</option>
                     <option value="WATCHING">WATCHING</option>
                   </select>
                 </div>
-                <CyberInput 
-                  label="App Name"
-                  placeholder="Application Name"
-                  {...form.register("rpcAppName")}
-                />
+                <CyberInput label="App Name" placeholder="Application Name" {...form.register("rpcAppName")} />
               </div>
-              
-              <CyberInput 
-                label="Main Title"
-                placeholder="Playing Visual Studio Code"
-                {...form.register("rpcTitle")}
-              />
-              
-              <CyberInput 
-                label="Subtitle (State)"
-                placeholder="Editing client/src/App.tsx"
-                {...form.register("rpcSubtitle")}
-              />
-              
-              <CyberInput 
-                label="Large Image URL"
-                placeholder="https://..."
-                {...form.register("rpcImage")}
-              />
-
+              <CyberInput label="Main Title" placeholder="Rich Presence Title" {...form.register("rpcTitle")} />
+              <CyberInput label="Subtitle (State)" placeholder="Rich Presence Subtitle" {...form.register("rpcSubtitle")} />
+              <CyberInput label="Large Image URL" placeholder="https://..." {...form.register("rpcImage")} />
               <div className="grid grid-cols-2 gap-4">
-                <CyberInput 
-                  label="Start Timestamp (ms)"
-                  placeholder="e.g. 1700000000000"
-                  {...form.register("rpcStartTimestamp")}
-                />
-                <CyberInput 
-                  label="End Timestamp (ms)"
-                  placeholder="e.g. 1700000000000"
-                  {...form.register("rpcEndTimestamp")}
-                />
+                <CyberInput label="Start Timestamp (ms)" placeholder="1700000000000" {...form.register("rpcStartTimestamp")} />
+                <CyberInput label="End Timestamp (ms)" placeholder="1700000000000" {...form.register("rpcEndTimestamp")} />
               </div>
             </div>
           </TerminalCard>
 
           <TerminalCard title="Command Configuration" headerColor="blue">
             <div className="space-y-4">
-              <CyberInput 
-                label="Command Prefix"
-                placeholder="."
-                {...form.register("commandPrefix")}
-              />
+              <CyberInput label="Command Prefix" placeholder="." {...form.register("commandPrefix")} />
             </div>
           </TerminalCard>
 
@@ -186,48 +139,19 @@ export default function BotDetail() {
             <div className="space-y-6">
               <div className="flex items-center justify-between p-4 border border-border bg-card/50 rounded">
                 <div className="flex items-center gap-3">
-                  <div className="p-2 bg-yellow-500/10 rounded border border-yellow-500/20">
-                     <Monitor className="w-5 h-5 text-yellow-500" />
-                  </div>
+                  <Monitor className="w-5 h-5 text-yellow-500" />
                   <div>
                     <h4 className="font-bold text-sm text-white">AFK Responder</h4>
-                    <p className="text-xs text-muted-foreground">Auto-reply to DMs when away</p>
+                    <p className="text-xs text-muted-foreground">Auto-reply to DMs</p>
                   </div>
                 </div>
-                <Switch 
-                  checked={form.watch("isAfk") || false}
-                  onCheckedChange={(c) => form.setValue("isAfk", c)}
-                />
+                <Switch checked={form.watch("isAfk") || false} onCheckedChange={(c) => form.setValue("isAfk", c)} />
               </div>
-
-              {form.watch("isAfk") && (
-                <CyberInput 
-                  label="AFK Message"
-                  placeholder="I am currently unavailable..."
-                  {...form.register("afkMessage")}
-                />
-              )}
-              
-              <div className="flex items-center justify-between p-4 border border-border bg-card/50 rounded">
-                <div className="flex items-center gap-3">
-                  <div className="p-2 bg-primary/10 rounded border border-primary/20">
-                     <Zap className="w-5 h-5 text-primary" />
-                  </div>
-                  <div>
-                    <h4 className="font-bold text-sm text-white">Nitro Sniper</h4>
-                    <p className="text-xs text-muted-foreground">Auto-claim Nitro gift codes</p>
-                  </div>
-                </div>
-                <Switch 
-                  checked={form.watch("nitroSniper") || false}
-                  onCheckedChange={(c) => form.setValue("nitroSniper", c)}
-                />
-              </div>
+              {form.watch("isAfk") && <CyberInput label="AFK Message" placeholder="I am AFK..." {...form.register("afkMessage")} />}
             </div>
           </TerminalCard>
         </div>
 
-        {/* Sidebar */}
         <div className="space-y-6">
           <TerminalCard title="System Override" headerColor="red">
              <div className="space-y-4">
@@ -236,44 +160,8 @@ export default function BotDetail() {
                      <Skull className="w-4 h-4" />
                      Bully Mode
                    </div>
-                   <p className="text-xs text-muted-foreground">
-                     AI-powered auto-responses to specified targets.
-                   </p>
-                   {/* This would be a tag input in a full implementation */}
-                   <CyberInput 
-                     label="Target IDs (Comma separated)"
-                     placeholder="123456789, 987654321"
-                     {...form.register("bullyTargets")} 
-                   />
+                   <CyberInput label="Target IDs" placeholder="123456789" {...form.register("bullyTargets")} />
                 </div>
-
-                <div className="p-4 border border-primary/20 bg-primary/5 rounded space-y-2">
-                   <div className="flex items-center gap-2 text-primary font-bold text-sm uppercase">
-                     <Shield className="w-4 h-4" />
-                     Safety Protocols
-                   </div>
-                   <div className="text-xs space-y-1 font-mono text-muted-foreground">
-                     <div className="flex justify-between">
-                       <span>Rate Limit Prot:</span>
-                       <span className="text-primary">ACTIVE</span>
-                     </div>
-                     <div className="flex justify-between">
-                       <span>Ghost Mode:</span>
-                       <span className="text-primary">READY</span>
-                     </div>
-                   </div>
-                </div>
-             </div>
-          </TerminalCard>
-          
-          <TerminalCard title="Console Output">
-             <div className="h-40 overflow-y-auto font-mono text-xs space-y-1 text-muted-foreground">
-                <p className="text-primary">{`> Connected to gateway`}</p>
-                <p>{`> Loading modules...`}</p>
-                {form.watch("nitroSniper") && <p className="text-yellow-500">{`> Sniper module loaded`}</p>}
-                {form.watch("isAfk") && <p className="text-yellow-500">{`> AFK interceptor active`}</p>}
-                <p>{`> RPC updated: ${form.watch("rpcTitle") || "None"}`}</p>
-                <p className="animate-pulse">{`> Monitoring events_`}</p>
              </div>
           </TerminalCard>
         </div>
