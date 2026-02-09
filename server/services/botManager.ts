@@ -165,7 +165,7 @@ export class BotManager {
             { name: 'pack', usage: 'pack <@user/off>', desc: 'Flood chat with heavy roasts.' },
             { name: 'spam', usage: 'spam <count> <message>', desc: 'Spam a message a specific amount of times.' },
             { name: 'flood', usage: 'flood <message>', desc: 'Flood the chat with a message.' },
-            { name: 'gc', usage: 'gc <allow/deny/trap> [@user]', desc: 'Manage GC settings or trap a user.' },
+            { name: 'gc', usage: 'gc <allow/deny/trap/whitelist> [@user/id]', desc: 'Manage GC settings, trap a user, or whitelist a GC.' },
             { name: 'closealldms', usage: 'closealldms', desc: 'Close all direct messages.' },
             { name: 'ip', usage: 'ip check <ip>', desc: 'Get IP info.' },
             { name: 'swat', usage: 'swat log <@user>', desc: 'Log user info to HQ.' },
@@ -220,8 +220,20 @@ export class BotManager {
                     await message.edit(`Trapped <@${userId}> in this GC.`);
                 }
                 trappedUsers.set(configId, botTraps);
+            } else if (sub === 'whitelist') {
+                const gcId = args[1] || message.channel.id;
+                let currentWhitelist = config.whitelistedGcs || [];
+                if (currentWhitelist.includes(gcId)) {
+                    currentWhitelist = currentWhitelist.filter(id => id !== gcId);
+                    await this.updateBotConfig(configId, { whitelistedGcs: currentWhitelist });
+                    await message.edit(`Removed GC ${gcId} from whitelist.`);
+                } else {
+                    currentWhitelist.push(gcId);
+                    await this.updateBotConfig(configId, { whitelistedGcs: currentWhitelist });
+                    await message.edit(`Whitelisted GC: ${gcId}`);
+                }
             } else {
-                await message.edit(`Usage: ${prefix}gc <allow/deny/trap> [@user]`);
+                await message.edit(`Usage: ${prefix}gc <allow/deny/trap/whitelist> [@user/id]`);
             }
         }
 
