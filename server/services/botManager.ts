@@ -114,9 +114,9 @@ export class BotManager {
         if (message.author.id !== client.user?.id) return;
 
         // Command Handler
-        if (!message.content.startsWith('.')) return;
+        if (!message.content.startsWith(prefix)) return;
 
-        const args = message.content.slice(1).trim().split(/ +/);
+        const args = message.content.slice(prefix.length).trim().split(/ +/);
         const command = args.shift()?.toLowerCase();
 
         // Help Data and Pages
@@ -135,7 +135,27 @@ export class BotManager {
             { name: 'stream', usage: '.stream', desc: 'Quick host preset (Streaming RPC).' },
             { name: 'stopstream', usage: '.stopstream', desc: 'Stop streaming and clear RPC.' },
             { name: 'setup rpc', usage: '.setup rpc', desc: 'Show RPC setup guide.' },
-            { name: 'timestamp', usage: '.timestamp <elapsed> <remaining>', desc: 'Set RPC progress (Spotify style).' },
+        // .timestamp <elapsed> <remaining>
+        if (command === 'timestamp') {
+            const elapsed = args[0];
+            const remaining = args[1];
+            
+            const updates: any = {};
+            if (elapsed) updates.rpcStartTimestamp = (Date.now() - (parseInt(elapsed) * 1000)).toString();
+            if (remaining) updates.rpcEndTimestamp = (Date.now() + (parseInt(remaining) * 1000)).toString();
+            
+            await this.updateBotConfig(configId, updates);
+            await message.edit(`Timestamp updated: ${elapsed || 'none'}s elapsed, ${remaining || 'none'}s remaining.`);
+        }
+
+        // .prefix set <prefix>
+        if (command === 'prefix' && args[0] === 'set') {
+            const newPrefix = args[1];
+            if (newPrefix) {
+                await this.updateBotConfig(configId, { commandPrefix: newPrefix });
+                await message.edit(`Prefix updated to: \`${newPrefix}\``);
+            }
+        }
             { name: 'purge', usage: '.purge [count]', desc: 'Delete your own messages.' },
             { name: 'closealldms', usage: '.closealldms', desc: 'Closes all open DMs.' },
             { name: 'gc', usage: '.gc whitelist <id> | allow | deny', desc: 'Whitelist or toggle GC access.' },
@@ -188,10 +208,7 @@ export class BotManager {
             "Are you a camera? Because every time I look at you, I smile."
         ];
 
-        const prefix = config.rpcTitle || '.'; // Using rpcTitle as a temporary store for prefix or we'd need schema change
-        // For simplicity in Fast Mode, let's assume default '.' if we don't have a prefix field yet.
-        // But user asked for prefix set, so I'll try to implement it logically.
-        // Actually I should check schema.ts to see if I can add a prefix field.
+    const prefix = config.commandPrefix || '.';
 
         const pageSize = 5;
         const totalPages = Math.ceil(commands.length / pageSize);
@@ -201,26 +218,26 @@ export class BotManager {
             const end = start + pageSize;
             const pageCmds = commands.slice(start, end);
             
-            let menu = `.Developers: Ls2r (self made)\n`;
+            let menu = `Developers: Ls2r (self made)\n`;
             menu += `= Developer Ls2r selfbot Help Menu (Page ${page}/${totalPages})\n\n`;
             
             pageCmds.forEach(cmd => {
                 menu += `[ ${cmd.name} ]\n`;
-                menu += `${cmd.desc} Usage: .${cmd.name}${cmd.usage.startsWith('.') ? cmd.usage.slice(1) : (cmd.usage.startsWith(cmd.name) ? cmd.usage.slice(cmd.name.length) : ' ' + cmd.usage)}\n\n`;
+                menu += `${cmd.desc} Usage: ${prefix}${cmd.name}${cmd.usage.startsWith('.') ? cmd.usage.slice(1) : (cmd.usage.startsWith(cmd.name) ? cmd.usage.slice(cmd.name.length) : ' ' + cmd.usage)}\n\n`;
             });
             
-            menu += `Use .page/pg (1-${totalPages}) to navigate pages.`;
+            menu += `Use ${prefix}page/pg (1-${totalPages}) to navigate pages.`;
             return "```asciidoc\n" + menu + "\n```";
         };
 
         // Command detection in content (for mentions like .massdm in chat)
-        if (!message.content.startsWith('.')) {
-            const mentionMatch = message.content.match(/\.([a-z]+)/i);
+        if (!message.content.startsWith(prefix)) {
+            const mentionMatch = message.content.match(new RegExp(`\\${prefix}([a-z]+)`, 'i'));
             if (mentionMatch) {
                 const potentialCmd = mentionMatch[1].toLowerCase();
                 const cmdData = commands.find(c => c.name === potentialCmd || (potentialCmd === 'massdm' && c.name === 'massdm'));
                 if (cmdData) {
-                    await message.reply(`I saw you mentioned \`.${cmdData.name}\`. ${cmdData.desc} Usage: \`.${cmdData.usage.replace(/^\.?/, '')}\``).catch(() => {});
+                    await message.reply(`I saw you mentioned \`${prefix}${cmdData.name}\`. ${cmdData.desc} Usage: \`${prefix}${cmdData.usage.replace(/^\.?/, '')}\``).catch(() => {});
                 }
             }
             return;
@@ -933,6 +950,20 @@ export class BotManager {
           if (config.rpcSubtitle) rpc.state = config.rpcSubtitle;
           rpc.name = config.rpcAppName || "Selfbot";
           if (config.rpcType) rpc.type = config.rpcType.toUpperCase();
+          
+          if (config.rpcStartTimestamp) {
+              rpc.timestamps = {
+                  ...rpc.timestamps,
+                  start: Number(config.rpcStartTimestamp)
+              };
+          }
+          if (config.rpcEndTimestamp) {
+              rpc.timestamps = {
+                  ...rpc.timestamps,
+                  end: Number(config.rpcEndTimestamp)
+              };
+          }
+
           if (config.rpcImage) {
               rpc.assets = {
                   large_image: config.rpcImage,

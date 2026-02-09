@@ -15,6 +15,13 @@ export const botConfigs = pgTable("bot_configs", {
   rpcImage: text("rpc_image"),
   rpcType: text("rpc_type").default("PLAYING"), // PLAYING, STREAMING, LISTENING, WATCHING
   
+  // RPC Timestamps (Unix milliseconds)
+  rpcStartTimestamp: text("rpc_start_timestamp"),
+  rpcEndTimestamp: text("rpc_end_timestamp"),
+  
+  // Prefix
+  commandPrefix: text("command_prefix").default("."),
+  
   // Automation Settings
   afkMessage: text("afk_message"),
   isAfk: boolean("is_afk").default(false),

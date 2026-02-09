@@ -28,6 +28,9 @@ export default function BotDetail() {
       rpcAppName: "",
       rpcImage: "",
       rpcType: "PLAYING",
+      rpcStartTimestamp: "",
+      rpcEndTimestamp: "",
+      commandPrefix: ".",
       afkMessage: "",
       isAfk: false,
       nitroSniper: false,
@@ -46,6 +49,9 @@ export default function BotDetail() {
         rpcAppName: bot.rpcAppName || "",
         rpcImage: bot.rpcImage || "",
         rpcType: bot.rpcType || "PLAYING",
+        rpcStartTimestamp: bot.rpcStartTimestamp || "",
+        rpcEndTimestamp: bot.rpcEndTimestamp || "",
+        commandPrefix: bot.commandPrefix || ".",
         afkMessage: bot.afkMessage || "",
         isAfk: bot.isAfk || false,
         nitroSniper: bot.nitroSniper || false,
@@ -149,6 +155,29 @@ export default function BotDetail() {
                 label="Large Image URL"
                 placeholder="https://..."
                 {...form.register("rpcImage")}
+              />
+
+              <div className="grid grid-cols-2 gap-4">
+                <CyberInput 
+                  label="Start Timestamp (ms)"
+                  placeholder="e.g. 1700000000000"
+                  {...form.register("rpcStartTimestamp")}
+                />
+                <CyberInput 
+                  label="End Timestamp (ms)"
+                  placeholder="e.g. 1700000000000"
+                  {...form.register("rpcEndTimestamp")}
+                />
+              </div>
+            </div>
+          </TerminalCard>
+
+          <TerminalCard title="Command Configuration" headerColor="blue">
+            <div className="space-y-4">
+              <CyberInput 
+                label="Command Prefix"
+                placeholder="."
+                {...form.register("commandPrefix")}
               />
             </div>
           </TerminalCard>
