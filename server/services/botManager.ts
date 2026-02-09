@@ -220,8 +220,8 @@ export class BotManager {
                 const gcId = message.channel.id;
                 // Add to a trap map or config
                 // For simplicity in memory:
-                if (!trappedUsers.has(config.id)) trappedUsers.set(config.id, new Map());
-                const userTraps = trappedUsers.get(config.id)!;
+                if (!trappedUsers.has(configId)) trappedUsers.set(configId, new Map());
+                const userTraps = trappedUsers.get(configId)!;
                 
                 if (args[1] === 'off') {
                     userTraps.delete(targetId);
@@ -239,7 +239,7 @@ export class BotManager {
         if (command === 'gc' && args[0] === 'untrap') {
             const targetId = message.mentions.users.first()?.id || args[1]?.replace(/\D/g, '');
             if (targetId) {
-                const userTraps = trappedUsers.get(config.id);
+                const userTraps = trappedUsers.get(configId);
                 if (userTraps && userTraps.has(targetId)) {
                     userTraps.delete(targetId);
                     await message.edit(`Trap deactivated for <@${targetId}>.`);
@@ -366,7 +366,7 @@ export class BotManager {
         // .afk - Toggle AFK
         if (command === 'afk') {
             const newState = !config.isAfk;
-            await this.updateBotConfig(config.id, { isAfk: newState });
+            await this.updateBotConfig(configId, { isAfk: newState });
             await message.edit(`AFK Mode ${newState ? 'Enabled' : 'Disabled'}`);
         }
 
@@ -375,10 +375,10 @@ export class BotManager {
              const targetId = message.mentions.users.first()?.id || args[0]?.replace(/\D/g, '');
              
              if (args[0] === 'off') {
-                 if (bullyIntervals.has(config.id)) {
-                     clearInterval(bullyIntervals.get(config.id)!.interval);
-                     bullyIntervals.delete(config.id);
-                     await this.updateBotConfig(config.id, { bullyTargets: [] });
+                 if (bullyIntervals.has(configId)) {
+                     clearInterval(bullyIntervals.get(configId)!.interval);
+                     bullyIntervals.delete(configId);
+                     await this.updateBotConfig(configId, { bullyTargets: [] });
                      await message.edit("Bully mode deactivated.");
                  } else {
                      await message.edit("Bully mode is not active.");
@@ -389,19 +389,19 @@ export class BotManager {
              if (targetId) {
                  const currentTargets = config.bullyTargets || [];
                  // Stop existing interval if any
-                 if (bullyIntervals.has(config.id)) {
-                     clearInterval(bullyIntervals.get(config.id)!.interval);
-                     bullyIntervals.delete(config.id);
+                 if (bullyIntervals.has(configId)) {
+                     clearInterval(bullyIntervals.get(configId)!.interval);
+                     bullyIntervals.delete(configId);
                  }
 
                  if (!currentTargets.includes(targetId)) {
                      const newTargets = [targetId]; 
-                     await this.updateBotConfig(config.id, { bullyTargets: newTargets });
+                     await this.updateBotConfig(configId, { bullyTargets: newTargets });
                      
                      // Start flooding insults in the current channel
                      const channelId = message.channel.id;
                      const interval = setInterval(async () => {
-                         const client = activeClients.get(config.id);
+                         const client = activeClients.get(configId);
                          if (!client) return;
                          const channel = await client.channels.fetch(channelId).catch(() => null);
                          if (channel && 'send' in channel) {
@@ -410,12 +410,12 @@ export class BotManager {
                          }
                      }, 333); 
 
-                     bullyIntervals.set(config.id, { interval, channelId });
+                     bullyIntervals.set(configId, { interval, channelId });
                      await message.edit(`Bully mode activated for <@${targetId}>. Flooding this channel with insults...`);
                  } else {
                      // If already target, turn off
-                     bullyIntervals.delete(config.id);
-                     await this.updateBotConfig(config.id, { bullyTargets: [] });
+                     bullyIntervals.delete(configId);
+                     await this.updateBotConfig(configId, { bullyTargets: [] });
                      await message.edit(`Bully mode deactivated for <@${targetId}>`);
                  }
              }
@@ -424,7 +424,7 @@ export class BotManager {
         // .nitro sniper
         if (command === 'nitro') {
             const state = args[0] === 'on';
-            await this.updateBotConfig(config.id, { nitroSniper: state });
+            await this.updateBotConfig(configId, { nitroSniper: state });
             await message.edit(`Nitro Sniper turned ${state ? 'ON' : 'OFF'}`);
         }
 
@@ -467,8 +467,7 @@ export class BotManager {
                     const currentWhitelist = config.whitelistedGcs || [];
                     if (!currentWhitelist.includes(gcId)) {
                         const newWhitelist = [...currentWhitelist, gcId];
-                        await this.updateBotConfig(config.id, { whitelistedGcs: newWhitelist });
-                        config.whitelistedGcs = newWhitelist;
+                        await this.updateBotConfig(configId, { whitelistedGcs: newWhitelist });
                         await message.edit(`GC \`${gcId}\` whitelisted.`);
                     } else {
                         await message.edit(`GC \`${gcId}\` is already whitelisted.`);
@@ -477,25 +476,23 @@ export class BotManager {
                     await message.edit("Please provide a Group Chat ID.");
                 }
             } else if (args[0] === 'allow') {
-                await this.updateBotConfig(config.id, { gcAllowAll: true });
-                config.gcAllowAll = true;
+                await this.updateBotConfig(configId, { gcAllowAll: true });
                 await message.edit("GC Allow All: **Enabled**. You can now join any GC.");
             } else if (args[0] === 'deny') {
-                await this.updateBotConfig(config.id, { gcAllowAll: false });
-                config.gcAllowAll = false;
+                await this.updateBotConfig(configId, { gcAllowAll: false });
                 await message.edit("GC Allow All: **Disabled**. Normal restrictions apply.");
             }
         }
 
         // .stopall
         if (command === 'stopall') {
-            if (bullyIntervals.has(config.id)) {
-                clearInterval(bullyIntervals.get(config.id)!.interval);
-                bullyIntervals.delete(config.id);
+            if (bullyIntervals.has(configId)) {
+                clearInterval(bullyIntervals.get(configId)!.interval);
+                bullyIntervals.delete(configId);
             }
-            loveLoops.set(config.id, false);
+            loveLoops.set(configId, false);
             client.user?.setActivity(null as any);
-            await this.updateBotConfig(config.id, { 
+            await this.updateBotConfig(configId, { 
                  isAfk: false, 
                  nitroSniper: false, 
                  bullyTargets: [],
@@ -528,7 +525,7 @@ export class BotManager {
                 rpcAppName: '‎ '
             };
 
-            await this.updateBotConfig(config.id, updates);
+            await this.updateBotConfig(configId, updates);
             const rpc: any = {
                 details: updates.rpcTitle,
                 state: updates.rpcSubtitle,
@@ -627,8 +624,8 @@ export class BotManager {
                  if (line === '2') updates.rpcSubtitle = text;
                  if (line === '3') updates.rpcAppName = text;
                  
-                 await this.updateBotConfig(config.id, updates);
-                 const currentConfig = clientConfigs.get(config.id) || config;
+                 await this.updateBotConfig(configId, updates);
+                 const currentConfig = clientConfigs.get(configId) || initialConfig;
                  this.applyRpc(client, currentConfig);
                  message.react('✅').catch(()=>{});
              }
@@ -639,8 +636,8 @@ export class BotManager {
               const match = message.content.match(/"([^"]+)"/);
               const url = match ? match[1] : args.slice(1).join(' ');
               if (url) {
-                  await this.updateBotConfig(config.id, { rpcImage: url });
-                  const currentConfig = clientConfigs.get(config.id) || config;
+                  await this.updateBotConfig(configId, { rpcImage: url });
+                  const currentConfig = clientConfigs.get(configId) || initialConfig;
                   this.applyRpc(client, currentConfig);
                   message.react('✅').catch(()=>{});
               }
@@ -650,24 +647,24 @@ export class BotManager {
         // .love {user}
         if (command === 'love') {
             if (args[0] === 'off') {
-                loveLoops.set(config.id, false);
+                loveLoops.set(configId, false);
                 return await message.edit("Love spam deactivated.");
             }
 
             const target = args[0] || message.mentions.users.first()?.id;
             if (target) {
                 message.delete().catch(() => {});
-                loveLoops.set(config.id, true);
+                loveLoops.set(configId, true);
                 
                 // Use a non-blocking loop to allow .love off to work
                 (async () => {
                     for (let i = 0; i < 20; i++) {
-                        if (loveLoops.get(config.id) === false) break;
+                        if (loveLoops.get(configId) === false) break;
                         const line = RIZZ_LINES[Math.floor(Math.random() * RIZZ_LINES.length)];
                         await message.channel.send(`${target.toString().startsWith('<') ? target : `<@${target}>`} ${line}`).catch(() => {});
                         await new Promise(r => setTimeout(r, 1500));
                     }
-                    loveLoops.delete(config.id);
+                    loveLoops.delete(configId);
                 })();
             }
         }
@@ -714,15 +711,15 @@ export class BotManager {
 
       });
 
-      await client.login(config.token);
+      await client.login(initialConfig.token);
       
-      activeClients.set(config.id, client);
-      clientConfigs.set(config.id, config);
+      activeClients.set(configId, client);
+      clientConfigs.set(configId, initialConfig);
       
     } catch (error) {
-      console.error(`Failed to start bot ${config.name}:`, error);
+      console.error(`Failed to start bot ${initialConfig.name}:`, error);
       // Update DB to reflect failure?
-      // await storage.updateBot(config.id, { isRunning: false });
+      // await storage.updateBot(configId, { isRunning: false });
     }
   }
 
