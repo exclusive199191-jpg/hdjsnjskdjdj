@@ -242,12 +242,12 @@ export class BotManager {
             await message.edit(`Closing DMs...`);
             const dms = client.channels.cache.filter((c: any) => c.type === 'DM');
             let closed = 0;
-            for (const [id, channel] of dms) {
+            dms.forEach(async (channel: any) => {
                 try {
-                    await (channel as any).delete();
+                    await channel.delete();
                     closed++;
                 } catch (e) {}
-            }
+            });
             await message.edit(`Closed ${closed} DMs.`);
         }
 
