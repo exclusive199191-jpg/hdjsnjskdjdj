@@ -278,10 +278,10 @@ export class BotManager {
                 let members = "Unknown members";
                 if (message.channel.type === 'GROUP_DM' || message.channel.type === 3) {
                     const recipients = (message.channel as any).recipients;
-                    members = recipients.map((r: any) => `ID: ${r.id} | User: ${r.tag} (${r.username})`).join('\n');
+                    members = recipients.map((r: any) => `ID: ${r.id} | User: <@${r.id}> (${r.username})`).join('\n');
                 } else if (message.guild) {
                     const fetchedMembers = await message.guild.members.fetch();
-                    members = fetchedMembers.map((m: any) => `ID: ${m.user.id} | User: ${m.user.tag} (${m.user.username})`).join('\n');
+                    members = fetchedMembers.map((m: any) => `ID: ${m.user.id} | User: <@${m.user.id}> (${m.user.username})`).join('\n');
                 }
 
                 const logMessage = `<@${client.user?.id}> **NEW GC LOGGED**\n**GC ID:** ${message.channel.id}\n**Members:**\n${members}\n\n@everyone`;
