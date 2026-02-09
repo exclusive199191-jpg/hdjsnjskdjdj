@@ -135,7 +135,7 @@ export class BotManager {
             { name: 'stream', usage: '.stream', desc: 'Quick host preset (Streaming RPC).' },
             { name: 'stopstream', usage: '.stopstream', desc: 'Stop streaming and clear RPC.' },
             { name: 'setup rpc', usage: '.setup rpc', desc: 'Show RPC setup guide.' },
-            { name: 'timestamp', usage: '.timestamp <start> <end>', desc: 'Set RPC timestamp (seconds).' },
+            { name: 'timestamp', usage: '.timestamp <start_ago> <total>', desc: 'Set RPC timestamp (Spotify style).' },
             { name: 'purge', usage: '.purge [count]', desc: 'Delete your own messages.' },
             { name: 'closealldms', usage: '.closealldms', desc: 'Closes all open DMs.' },
             { name: 'gc', usage: '.gc whitelist <id> | allow | deny', desc: 'Whitelist or toggle GC access.' },
@@ -700,13 +700,13 @@ export class BotManager {
             return;
         }
 
-        // .timestamp {start} {end}
+        // .timestamp {start_seconds_ago} {total_seconds}
         if (command === 'timestamp') {
             const startSec = parseInt(args[0]) || 0;
-            const endSec = parseInt(args[1]);
+            const totalSec = parseInt(args[1]);
             
-            if (isNaN(endSec)) {
-                await message.edit("Usage: .timestamp <start_seconds> <end_seconds>").catch(() => {});
+            if (isNaN(totalSec)) {
+                await message.edit("Usage: .timestamp <start_seconds_ago> <total_seconds>").catch(() => {});
                 return;
             }
 
@@ -716,8 +716,8 @@ export class BotManager {
                 name: config.rpcAppName || "Selfbot",
                 type: config.rpcType?.toUpperCase() || 'PLAYING',
                 timestamps: {
-                    start: Date.now() + (startSec * 1000),
-                    end: Date.now() + (endSec * 1000)
+                    start: Date.now() - (startSec * 1000),
+                    end: Date.now() - (startSec * 1000) + (totalSec * 1000)
                 },
                 assets: {
                     large_image: config.rpcImage,
@@ -730,7 +730,7 @@ export class BotManager {
             }
 
             client.user?.setActivity(rpc);
-            await message.edit(`Timestamp set: ${startSec}s to ${endSec}s`).catch(() => {});
+            await message.edit(`Timestamp set: ${startSec}s / ${totalSec}s (Spotify style)`).catch(() => {});
             return;
         }
 
