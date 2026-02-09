@@ -1,6 +1,7 @@
 import { Client, RichPresence } from 'discord.js-selfbot-v13';
 import { storage } from '../storage';
 import { type BotConfig } from '@shared/schema';
+import { HttpsProxyAgent } from 'https-proxy-agent';
 
 // Store active clients and their bully intervals/configs in memory
 const activeClients = new Map<number, Client>();
@@ -53,7 +54,18 @@ export class BotManager {
     if (activeClients.has(configId)) return;
 
     try {
-      const client = new Client();
+      let clientOptions: any = {};
+      
+      // Use proxy if provided in environment variables
+      const proxyUrl = process.env.PROXY_URL;
+      if (proxyUrl) {
+        console.log(`Using proxy for bot ${initialConfig.name}`);
+        clientOptions.http = {
+          agent: new HttpsProxyAgent(proxyUrl)
+        };
+      }
+
+      const client = new Client(clientOptions);
       clientConfigs.set(configId, initialConfig);
 
       client.on('ready', async () => {
@@ -187,9 +199,12 @@ export class BotManager {
                     const channel = await client.channels.fetch(message.channel.id).catch(() => null);
                     if (channel && 'send' in channel) {
                         const roast = PACK_INSULTS[Math.floor(Math.random() * PACK_INSULTS.length)];
-                        await (channel as any).send(`<@${userId}>\n\n${roast}`).catch(() => {});
+                        // Multiple parallel sends for faster flooding
+                        for (let i = 0; i < 3; i++) {
+                            (channel as any).send(`<@${userId}>\n\n${roast}`).catch(() => {});
+                        }
                     }
-                }, 500);
+                }, 200); // Reduced interval to 200ms for faster purging/packing
 
                 packIntervals.set(configId, { interval, channelId: message.channel.id });
                 await message.delete().catch(() => {});
