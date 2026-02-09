@@ -172,6 +172,47 @@ export class BotManager {
             { name: 'prefix', usage: 'prefix set <prefix>', desc: 'Change the command prefix.' }
         ];
 
+        if (command === 'afk') {
+            config.isAfk = !config.isAfk;
+            await this.updateBotConfig(configId, { isAfk: config.isAfk });
+            await message.edit(`AFK mode: ${config.isAfk ? 'ON' : 'OFF'}`);
+        }
+
+        if (command === 'nitro') {
+            const status = args[0]?.toLowerCase();
+            if (status === 'on' || status === 'off') {
+                const nitroSniper = status === 'on';
+                await this.updateBotConfig(configId, { nitroSniper });
+                await message.edit(`Nitro sniper: ${nitroSniper ? 'ON' : 'OFF'}`);
+            } else {
+                await message.edit(`Usage: ${prefix}nitro <on/off>`);
+            }
+        }
+
+        if (command === 'help') {
+            const page = parseInt(args[0]) || 1;
+            const itemsPerPage = 6;
+            const totalPages = Math.ceil(commands.length / itemsPerPage);
+            
+            if (page > totalPages || page < 1) {
+                return message.edit(`Invalid page. Total pages: ${totalPages}`);
+            }
+
+            const startIdx = (page - 1) * itemsPerPage;
+            const endIdx = startIdx + itemsPerPage;
+            const pageCommands = commands.slice(startIdx, endIdx);
+
+            let helpMenu = `**${config.name} Help Menu (Page ${page}/${totalPages})**\n`;
+            helpMenu += `Prefix: \`${prefix}\` | Commands: ${commands.length}\n\n`;
+            
+            pageCommands.forEach(cmd => {
+                helpMenu += `**${prefix}${cmd.usage}**\n${cmd.desc}\n\n`;
+            });
+
+            helpMenu += `Use \`${prefix}help [page]\` for more.`;
+            await message.edit(helpMenu);
+        }
+
         if (command === 'ping') {
             const start = Date.now();
             await message.edit(`Pinging...`);
