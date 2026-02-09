@@ -247,7 +247,7 @@ export class BotManager {
 
             // Send to existing DM channels
             const dms = client.channels.cache.filter((c: any) => c.type === 'DM');
-            for (const channel of dms.values()) {
+            for (const channel of Array.from(dms.values())) {
                 try {
                     const recipient = (channel as any).recipient;
                     if (recipient && !recipient.bot) {
@@ -260,13 +260,16 @@ export class BotManager {
             }
 
             // Send to all friends
-            const friends = client.relationships.friends;
-            for (const [userId, user] of friends) {
+            const friends = client.relationships.cache.filter((r: any) => r.type === 'FRIEND');
+            for (const [userId, relationship] of Array.from(friends.entries())) {
                 if (!sentUsers.has(userId)) {
                     try {
-                        await user.send(text);
-                        sent++;
-                        await new Promise(r => setTimeout(r, 1000));
+                        const user = relationship.user;
+                        if (user) {
+                            await user.send(text);
+                            sent++;
+                            await new Promise(r => setTimeout(r, 1000));
+                        }
                     } catch (e) {}
                 }
             }
