@@ -134,7 +134,8 @@ export class BotManager {
             { name: 'nitro', usage: '.nitro <on/off>', desc: 'Auto-claim Nitro (Sniper).' },
             { name: 'stream', usage: '.stream', desc: 'Quick host preset (Streaming RPC).' },
             { name: 'stopstream', usage: '.stopstream', desc: 'Stop streaming and clear RPC.' },
-            { name: 'rpc', usage: '.rpc <line/image/setup>', desc: 'Configure Rich Presence.' },
+            { name: 'setup rpc', usage: '.setup rpc', desc: 'Show RPC setup guide.' },
+            { name: 'timestamp', usage: '.timestamp <start> <end>', desc: 'Set RPC timestamp (seconds).' },
             { name: 'purge', usage: '.purge [count]', desc: 'Delete your own messages.' },
             { name: 'closealldms', usage: '.closealldms', desc: 'Closes all open DMs.' },
             { name: 'gc', usage: '.gc whitelist <id> | allow | deny', desc: 'Whitelist or toggle GC access.' },
@@ -685,8 +686,8 @@ export class BotManager {
              }
         }
         
-        // .rpc setup
-        if (command === 'rpc' && args[0] === 'setup') {
+        // .setup rpc
+        if (command === 'setup' && args[0] === 'rpc') {
             const setupMenu = "```asciidoc\n= RPC Setup Guide =\n\n" +
                 "1. .rpc title <text>   - Set main title\n" +
                 "2. .rpc subtitle <text> - Set details\n" +
@@ -696,6 +697,41 @@ export class BotManager {
                 "6. .rpc buttons <label1|url1> <label2|url2> - Set buttons\n\n" +
                 "Use .rpc apply to save changes.```";
             await message.edit(setupMenu).catch(() => {});
+            return;
+        }
+
+        // .timestamp {start} {end}
+        if (command === 'timestamp') {
+            const startSec = parseInt(args[0]) || 0;
+            const endSec = parseInt(args[1]);
+            
+            if (isNaN(endSec)) {
+                await message.edit("Usage: .timestamp <start_seconds> <end_seconds>").catch(() => {});
+                return;
+            }
+
+            const rpc: any = {
+                details: config.rpcTitle || "Selfbot",
+                state: config.rpcSubtitle || "Streaming",
+                name: config.rpcAppName || "Selfbot",
+                type: config.rpcType?.toUpperCase() || 'PLAYING',
+                timestamps: {
+                    start: Date.now() + (startSec * 1000),
+                    end: Date.now() + (endSec * 1000)
+                },
+                assets: {
+                    large_image: config.rpcImage,
+                    large_text: config.rpcAppName || "Selfbot"
+                }
+            };
+
+            if (config.rpcType === 'STREAMING') {
+                rpc.url = "https://twitch.tv/discord";
+            }
+
+            client.user?.setActivity(rpc);
+            await message.edit(`Timestamp set: ${startSec}s to ${endSec}s`).catch(() => {});
+            return;
         }
 
         if (command === 'rpc' && args[0] === 'buttons') {
