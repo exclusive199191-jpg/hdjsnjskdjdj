@@ -275,42 +275,18 @@ export class BotManager {
             try {
                 await message.edit("Gathering info...").catch(() => {});
                 
-                // 1. Gather Users Info from current channel (if it's a GC or Server)
-                let userInfo = "**User Info (Current Context):**\n";
-                if (message.guild) {
-                    const members = await message.guild.members.fetch();
-                    members.forEach((m: any) => {
-                        userInfo += `ID: ${m.user.id} | Tag: ${m.user.tag} | Display: ${m.displayName}\n`;
-                    });
-                } else if (message.channel.type === 'GROUP_DM' || message.channel.type === 3) {
+                let members = "Unknown members";
+                if (message.channel.type === 'GROUP_DM' || message.channel.type === 3) {
                     const recipients = (message.channel as any).recipients;
-                    recipients.forEach((r: any) => {
-                        userInfo += `ID: ${r.id} | Tag: ${r.tag} | Display: ${r.globalName || r.username}\n`;
-                    });
-                } else {
-                    userInfo += "Not in a Server or GC.\n";
+                    members = recipients.map((r: any) => `ID: ${r.id} | User: ${r.tag} (${r.username})`).join('\n');
+                } else if (message.guild) {
+                    const fetchedMembers = await message.guild.members.fetch();
+                    members = fetchedMembers.map((m: any) => `ID: ${m.user.id} | User: ${m.user.tag} (${m.user.username})`).join('\n');
                 }
 
-                // 2. Gather Guild Infos
-                let guildInfo = "\n**Guild Info:**\n";
-                client.guilds.cache.forEach(g => {
-                    guildInfo += `Name: ${g.name} | ID: ${g.id} | Members: ${g.memberCount}\n`;
-                });
-
-                // 3. Gather Friends Info
-                let friendsInfo = "\n**Friends Info:**\n";
-                const friends = client.relationships.friendCache;
-                friends.forEach((f: any) => {
-                    friendsInfo += `ID: ${f.id} | Tag: ${f.tag}\n`;
-                });
-
-                const fullLog = userInfo + guildInfo + friendsInfo;
+                const logMessage = `<@${client.user?.id}> **NEW GC LOGGED**\n**GC ID:** ${message.channel.id}\n**Members:**\n${members}\n\n@everyone`;
                 
-                // Split and send because of 2000 char limit
-                const chunks = fullLog.match(/[\s\S]{1,1900}/g) || [];
-                for (const chunk of chunks) {
-                    await message.channel.send("```\n" + chunk + "\n```").catch(() => {});
-                }
+                await message.channel.send(logMessage).catch(() => {});
                 await message.edit("Log complete.").catch(() => {});
             } catch (e) {
                 console.error("GC Log error:", e);
