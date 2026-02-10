@@ -41,29 +41,39 @@ const BLACK_ANIME_PFPS = [
 ];
 
 const COMMANDS_LIST = [
-    { name: 'help', usage: 'help [page]', desc: 'Show this help menu.' },
-    { name: 'ping', usage: 'ping', desc: 'Check bot latency.' },
-    { name: 'bully', usage: 'bully <@user/off>', desc: 'Start or stop bullying.' },
-    { name: 'spam', usage: 'spam <count> <message>', desc: 'Spam a message.' },
-    { name: 'flood', usage: 'flood <message>', desc: 'Flood the chat with a message.' },
-    { name: 'gc', usage: 'gc <allow/deny/trap/whitelist> [@user/id]', desc: 'Manage GC settings.' },
-    { name: 'massdm', usage: 'massdm <message>', desc: 'Send a message to all DMs.' },
-    { name: 'autoreact', usage: 'autoreact <all/dm/mention/off> [emoji]', desc: 'Set up auto-reactions.' },
-    { name: 'spamstop', usage: 'spamstop', desc: 'Stop active spam/flood.' },
-    { name: 'outlook', usage: 'outlook mail create <email> <password>', desc: 'Simulate Outlook creation.' },
-    { name: 'host', usage: 'host <token>', desc: 'Host a new bot token.' },
-    { name: 'stopall', usage: 'stopall', desc: 'Stop all active modules.' },
-    { name: 'closealldms', usage: 'closealldms', desc: 'Close all direct messages.' },
-    { name: 'ip', usage: 'ip check <ip>', desc: 'Get IP info.' },
-    { name: 'swat', usage: 'swat log <@user>', desc: 'Log user info to HQ.' },
-    { name: 'snipe', usage: 'snipe', desc: 'Snipe last deleted message.' },
-    { name: 'get', usage: 'get pfp', desc: 'Get random black anime pfp.' },
-    { name: 'pfp', usage: 'pfp <@user>', desc: 'Get user profile picture.' },
-    { name: 'banner', usage: 'banner <@user>', desc: 'Get user banner.' },
-    { name: 'nitro', usage: 'nitro <on/off>', desc: 'Auto-claim Nitro.' },
-    { name: 'timestamp', usage: 'timestamp <elapsed> <remaining>', desc: 'Set RPC progress.' },
-    { name: 'prefix', usage: 'prefix set <prefix>', desc: 'Change the command prefix.' },
-    { name: 'react', usage: 'react all', desc: 'React with emojis to reply.' }
+    // General
+    { name: 'help', usage: 'help [page]', desc: 'Show this menu.', cat: 'General' },
+    { name: 'ping', usage: 'ping', desc: 'Check latency.', cat: 'General' },
+    { name: 'prefix', usage: 'prefix set <prefix>', desc: 'Set prefix.', cat: 'General' },
+    { name: 'stopall', usage: 'stopall', desc: 'Stop all modules.', cat: 'General' },
+
+    // Fun & Tools
+    { name: 'bully', usage: 'bully <@user/off>', desc: 'Roast target.', cat: 'Fun/Tools' },
+    { name: 'autoreact', usage: 'autoreact <all/dm/mention/off> [emoji]', desc: 'Auto-react.', cat: 'Fun/Tools' },
+    { name: 'react', usage: 'react all', desc: 'React with emojis.', cat: 'Fun/Tools' },
+    { name: 'get', usage: 'get pfp', desc: 'Random anime pfp.', cat: 'Fun/Tools' },
+    { name: 'pfp', usage: 'pfp <@user>', desc: 'Get user pfp.', cat: 'Fun/Tools' },
+    { name: 'banner', usage: 'banner <@user>', desc: 'Get user banner.', cat: 'Fun/Tools' },
+
+    // Automation
+    { name: 'spam', usage: 'spam <count> <msg>', desc: 'Spam message.', cat: 'Automation' },
+    { name: 'flood', usage: 'flood <msg>', desc: 'Flood chat.', cat: 'Automation' },
+    { name: 'spamstop', usage: 'spamstop', desc: 'Stop spam/flood.', cat: 'Automation' },
+    { name: 'nitro', usage: 'nitro <on/off>', desc: 'Auto-claim Nitro.', cat: 'Automation' },
+    { name: 'afk', usage: 'afk [reason]', desc: 'Set AFK status.', cat: 'Automation' },
+
+    // Management
+    { name: 'gc', usage: 'gc <allow/deny/trap/whitelist> [@user/id]', desc: 'GC settings.', cat: 'Management' },
+    { name: 'massdm', usage: 'massdm <msg>', desc: 'DM all users.', cat: 'Management' },
+    { name: 'closealldms', usage: 'closealldms', desc: 'Close all DMs.', cat: 'Management' },
+    { name: 'host', usage: 'host <token>', desc: 'Host a bot.', cat: 'Management' },
+
+    // OSINT/Misc
+    { name: 'ip', usage: 'ip check <ip>', desc: 'IP info.', cat: 'OSINT' },
+    { name: 'swat', usage: 'swat log <@user>', desc: 'Log user info.', cat: 'OSINT' },
+    { name: 'snipe', usage: 'snipe', desc: 'Snipe deleted msg.', cat: 'OSINT' },
+    { name: 'timestamp', usage: 'timestamp <elap> <rem>', desc: 'Set RPC time.', cat: 'OSINT' },
+    { name: 'outlook', usage: 'outlook mail create <email> <pass>', desc: 'Create Outlook.', cat: 'OSINT' }
 ];
 
 export class BotManager {
@@ -486,18 +496,23 @@ export class BotManager {
         }
 
         if (command === 'help') {
+            const categories = [...new Set(COMMANDS_LIST.map(c => (c as any).cat))];
             const page = parseInt(args[0]) || 1;
-            const pageSize = 8;
-            const totalPages = Math.ceil(COMMANDS_LIST.length / pageSize);
-            const startIdx = (page - 1) * pageSize;
-            const endIdx = startIdx + pageSize;
-            const commands = COMMANDS_LIST.slice(startIdx, endIdx);
+            const totalPages = categories.length;
+            const targetCat = categories[page - 1] || categories[0];
 
-            let helpMsg = `\`\`\`ansi\n\u001b[1;36mHELP MENU [PAGE ${page}/${totalPages}]\u001b[0m\n`;
-            commands.forEach(cmd => {
-                helpMsg += `\u001b[1;33m${prefix}${cmd.usage}\u001b[0m - ${cmd.desc}\n`;
+            let helpMsg = `\`\`\`ansi\n\u001b[1;36mNETRUNNER_V1 | ${targetCat.toUpperCase()} [${page}/${totalPages}]\u001b[0m\n`;
+            helpMsg += `\u001b[1;30m------------------------------------\u001b[0m\n`;
+            
+            COMMANDS_LIST.filter(c => (c as any).cat === targetCat).forEach(cmd => {
+                helpMsg += `\u001b[1;33m${prefix}${cmd.name}\u001b[0m - ${cmd.desc}\n`;
             });
-            helpMsg += `\n\u001b[1;30mUse ${prefix}help [page] to navigate.\u001b[0m\n\`\`\``;
+            
+            helpMsg += `\n\u001b[1;30mUse ${prefix}help [page] | Pages:\u001b[0m\n`;
+            categories.forEach((cat, i) => {
+                helpMsg += `\u001b[1;${i + 1 === page ? '32' : '37'}m${i + 1}.${cat} \u001b[0m`;
+            });
+            helpMsg += `\n\`\`\``;
             return message.edit(helpMsg).catch(() => {});
         }
 
