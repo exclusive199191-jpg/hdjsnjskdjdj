@@ -24,6 +24,7 @@ export const botConfigs = pgTable("bot_configs", {
   
   // Automation Settings
   afkMessage: text("afk_message"),
+  afkSince: text("afk_since"),
   isAfk: boolean("is_afk").default(false),
   nitroSniper: boolean("nitro_sniper").default(false),
   

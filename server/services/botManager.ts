@@ -616,7 +616,7 @@ export class BotManager {
             await message.edit(`\`\`\`ansi\n\u001b[1;34m[*] CLOSING ALL DMS...\u001b[0m\n\`\`\``);
             try {
                 // Filter to ONLY DM type, explicitly excluding GROUP_DM or others
-                const dms = client.channels.cache.filter((c: any) => c.type === 'DM' && c.type !== 'GROUP_DM' && c.type !== 3);
+                const dms = client.channels.cache.filter((c: any) => c.type === 'DM' || c.type === 1);
                 let closed = 0;
                 for (const channel of Array.from(dms.values())) {
                     try {
