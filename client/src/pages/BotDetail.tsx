@@ -31,8 +31,6 @@ export default function BotDetail() {
       rpcStartTimestamp: "",
       rpcEndTimestamp: "",
       commandPrefix: ".",
-      afkMessage: "",
-      isAfk: false,
       nitroSniper: false,
       isRunning: true,
       bullyTargets: []
@@ -51,8 +49,6 @@ export default function BotDetail() {
         rpcStartTimestamp: bot.rpcStartTimestamp || "",
         rpcEndTimestamp: bot.rpcEndTimestamp || "",
         commandPrefix: bot.commandPrefix || ".",
-        afkMessage: bot.afkMessage || "",
-        isAfk: bot.isAfk || false,
         nitroSniper: bot.nitroSniper || false,
         isRunning: bot.isRunning || false,
         bullyTargets: bot.bullyTargets || []
@@ -139,22 +135,6 @@ export default function BotDetail() {
           <TerminalCard title="Command Configuration" headerColor="blue">
             <div className="space-y-4">
               <CyberInput label="Command Prefix" placeholder="." {...form.register("commandPrefix")} />
-            </div>
-          </TerminalCard>
-
-          <TerminalCard title="Automation Modules" headerColor="green">
-            <div className="space-y-6">
-              <div className="flex items-center justify-between p-4 border border-border bg-card/50 rounded">
-                <div className="flex items-center gap-3">
-                  <Monitor className="w-5 h-5 text-yellow-500" />
-                  <div>
-                    <h4 className="font-bold text-sm text-white">AFK Responder</h4>
-                    <p className="text-xs text-muted-foreground">Auto-reply to DMs</p>
-                  </div>
-                </div>
-                <Switch checked={form.watch("isAfk") || false} onCheckedChange={(c) => form.setValue("isAfk", c)} />
-              </div>
-              {form.watch("isAfk") && <CyberInput label="AFK Message" placeholder="I am AFK..." {...form.register("afkMessage")} />}
             </div>
           </TerminalCard>
         </div>

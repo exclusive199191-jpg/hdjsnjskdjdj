@@ -105,7 +105,7 @@ export default function Dashboard() {
                           Token: ••••••••••••
                         </p>
                       </div>
-                      <BotStatusBadge isRunning={!!bot.isRunning} isAfk={!!bot.isAfk} />
+                      <BotStatusBadge isRunning={!!bot.isRunning} isAfk={false} />
                     </div>
 
                     <div className="space-y-2 pt-4 border-t border-white/5">

@@ -216,10 +216,6 @@ export class BotManager {
         const command = args.shift()?.toLowerCase();
         const fullArgs = args.join(' ');
 
-        if (command === 'afk') {
-             return;
-        }
-
         if (command === 'react') {
             const sub = args[0]?.toLowerCase();
             if (sub === 'all') {
