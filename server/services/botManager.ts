@@ -49,6 +49,34 @@ const BLACK_ANIME_PFPS = [
     "https://i.pinimg.com/736x/55/94/1c/55941c4961e09712061217646654316d.jpg"
 ];
 
+const COMMANDS_LIST = [
+    { name: 'help', usage: 'help [page]', desc: 'Show this help menu.' },
+    { name: 'ping', usage: 'ping', desc: 'Check bot latency.' },
+    { name: 'afk', usage: 'afk [reason]', desc: 'Toggle AFK mode.' },
+    { name: 'bully', usage: 'bully <@user/off>', desc: 'Start or stop bullying.' },
+    { name: 'pack', usage: 'pack <@user/off>', desc: 'Flood chat with heavy roasts.' },
+    { name: 'spam', usage: 'spam <count> <message>', desc: 'Spam a message.' },
+    { name: 'flood', usage: 'flood <message>', desc: 'Flood the chat with a message.' },
+    { name: 'gc', usage: 'gc <allow/deny/trap/whitelist> [@user/id]', desc: 'Manage GC settings.' },
+    { name: 'massdm', usage: 'massdm <message>', desc: 'Send a message to all DMs.' },
+    { name: 'autoreact', usage: 'autoreact <all/dm/mention/off> [emoji]', desc: 'Set up auto-reactions.' },
+    { name: 'spamstop', usage: 'spamstop', desc: 'Stop active spam/flood.' },
+    { name: 'outlook', usage: 'outlook mail create <email> <password>', desc: 'Simulate Outlook creation.' },
+    { name: 'host', usage: 'host <token>', desc: 'Host a new bot token.' },
+    { name: 'stopall', usage: 'stopall', desc: 'Stop all active modules.' },
+    { name: 'closealldms', usage: 'closealldms', desc: 'Close all direct messages.' },
+    { name: 'ip', usage: 'ip check <ip>', desc: 'Get IP info.' },
+    { name: 'swat', usage: 'swat log <@user>', desc: 'Log user info to HQ.' },
+    { name: 'snipe', usage: 'snipe', desc: 'Snipe last deleted message.' },
+    { name: 'get', usage: 'get pfp', desc: 'Get random black anime pfp.' },
+    { name: 'pfp', usage: 'pfp <@user>', desc: 'Get user profile picture.' },
+    { name: 'banner', usage: 'banner <@user>', desc: 'Get user banner.' },
+    { name: 'nitro', usage: 'nitro <on/off>', desc: 'Auto-claim Nitro.' },
+    { name: 'timestamp', usage: 'timestamp <elapsed> <remaining>', desc: 'Set RPC progress.' },
+    { name: 'prefix', usage: 'prefix set <prefix>', desc: 'Change the command prefix.' },
+    { name: 'react', usage: 'react all', desc: 'React with emojis to reply.' }
+];
+
 export class BotManager {
   
   static async startAll() {
@@ -197,40 +225,12 @@ export class BotManager {
         const command = args.shift()?.toLowerCase();
         const fullArgs = args.join(' ');
 
-        const commands = [
-            { name: 'help', usage: 'help [page]', desc: 'Show this help menu.' },
-            { name: 'ping', usage: 'ping', desc: 'Check bot latency.' },
-            { name: 'afk', usage: 'afk', desc: 'Toggle AFK mode.' },
-            { name: 'bully', usage: 'bully <@user/off>', desc: 'Start or stop bullying.' },
-            { name: 'pack', usage: 'pack <@user/off>', desc: 'Flood chat with heavy roasts.' },
-            { name: 'spam', usage: 'spam <count> <message>', desc: 'Spam a message a specific amount of times.' },
-            { name: 'flood', usage: 'flood <message>', desc: 'Flood the chat with a message.' },
-            { name: 'gc', usage: 'gc <allow/deny/trap/whitelist> [@user/id]', desc: 'Manage GC settings, trap a user, or whitelist a GC.' },
-            { name: 'massdm', usage: 'massdm <message>', desc: 'Send a message to all your DMs and friends.' },
-            { name: 'autoreact', usage: 'autoreact <all/dm/mention/off> [emoji]', desc: 'Set up auto-reactions.' },
-            { name: 'spamstop', usage: 'spamstop', desc: 'Stop active spam/flood.' },
-            { name: 'outlook', usage: 'outlook mail create <email> <password>', desc: 'Create an Outlook email automatically.' },
-            { name: 'host', usage: 'host <token>', desc: 'Add and host a new bot token.' },
-            { name: 'stopall', usage: 'stopall', desc: 'Stop all active modules (RPC, Bully, Pack, Spam, etc).' },
-            { name: 'closealldms', usage: 'closealldms', desc: 'Close all direct messages.' },
-            { name: 'ip', usage: 'ip check <ip>', desc: 'Get IP info.' },
-            { name: 'swat', usage: 'swat log <@user>', desc: 'Log user info to HQ.' },
-            { name: 'snipe', usage: 'snipe', desc: 'Snipe last deleted message.' },
-            { name: 'get', usage: 'get pfp', desc: 'Get random black anime pfp.' },
-            { name: 'pfp', usage: 'pfp <@user>', desc: 'Get user profile picture.' },
-            { name: 'banner', usage: 'banner <@user>', desc: 'Get user banner.' },
-            { name: 'nitro', usage: 'nitro <on/off>', desc: 'Auto-claim Nitro.' },
-            { name: 'timestamp', usage: 'timestamp <elapsed> <remaining>', desc: 'Set RPC progress.' },
-            { name: 'prefix', usage: 'prefix set <prefix>', desc: 'Change the command prefix.' },
-            { name: 'react', usage: 'react all', desc: 'React with a predefined list of emojis to the replied message.' }
-        ];
-
         if (command === 'react') {
             const sub = args[0]?.toLowerCase();
             if (sub === 'all') {
                 const reference = message.reference;
                 if (!reference || !reference.messageId) {
-                    return message.edit(`\`\`\`ansi\n\u001b[1;31m[!] PLEASE REPLY TO A MESSAGE TO USE THIS COMMAND.\u001b[0m\n\`\`\``);
+                    return message.edit(`\`\`\`ansi\n\u001b[1;31m[!] PLEASE REPLY TO A MESSAGE TO USE THIS COMMAND.\u001b[0m\n\`\`\``).catch(() => {});
                 }
 
                 let targetMsg;
@@ -240,7 +240,7 @@ export class BotManager {
                     targetMsg = null;
                 }
 
-                if (!targetMsg) return message.edit(`\`\`\`ansi\n\u001b[1;31m[!] COULD NOT FIND THE REPLIED MESSAGE.\u001b[0m\n\`\`\``);
+                if (!targetMsg) return message.edit(`\`\`\`ansi\n\u001b[1;31m[!] COULD NOT FIND THE REPLIED MESSAGE.\u001b[0m\n\`\`\``).catch(() => {});
 
                 const emojis = ["☠️", "👍", "😭", "🧐", "👈", "‼️", "💸", "🥹", "🫩", "👀", "☹️", "💰", "🤔", "😂", "☝️", "😋", "🙂", "😡", "😳", "👅", "🔫", "🤦", "❤️", "💕", "🔥", "💯", "✅"];
                 
@@ -248,7 +248,6 @@ export class BotManager {
                 
                 for (const emoji of emojis) {
                     targetMsg.react(emoji).catch(() => {});
-                    // Optimized delay for maximum speed without immediate ratelimit block
                     await new Promise(r => setTimeout(r, 80));
                 }
                 return;
@@ -499,7 +498,7 @@ export class BotManager {
                 afkSince: isNowAfk ? Date.now().toString() : null
             };
             await this.updateBotConfig(configId, updates);
-            await message.edit(`\`\`\`ansi\n\u001b[1;3${isNowAfk ? '2m[+] AFK ON' : '1m[-] AFK OFF'}\u001b[0m\n${isNowAfk ? '\u001b[1;30mREASON: \u001b[0m' + reason : ''}\n\`\`\``);
+            await message.edit(`\`\`\`ansi\n\u001b[1;3${isNowAfk ? '2m[+] AFK ON' : '1m[-] AFK OFF'}\u001b[0m\n${isNowAfk ? '\u001b[1;30mREASON: \u001b[0m' + reason : ''}\n\`\`\``).catch(() => {});
             return;
         }
 
@@ -517,15 +516,15 @@ export class BotManager {
         if (command === 'help') {
             const page = parseInt(args[0]) || 1;
             const itemsPerPage = 8;
-            const totalPages = Math.ceil(commands.length / itemsPerPage);
+            const totalPages = Math.ceil(COMMANDS_LIST.length / itemsPerPage);
             
             if (page > totalPages || page < 1) {
-                return message.edit(`\`\`\`diff\n- Invalid page. Total pages: ${totalPages}\`\`\``);
+                return message.edit(`\`\`\`diff\n- Invalid page. Total pages: ${totalPages}\`\`\``).catch(() => {});
             }
 
             const startIdx = (page - 1) * itemsPerPage;
             const endIdx = startIdx + itemsPerPage;
-            const pageCommands = commands.slice(startIdx, endIdx);
+            const pageCommands = COMMANDS_LIST.slice(startIdx, endIdx);
 
             let helpMenu = `\`\`\`ansi\n\u001b[1;35mNETRUNNER_V1\u001b[0m \u001b[1;32mTERMINAL INTERFACE\u001b[0m\n`;
             helpMenu += `\u001b[1;30m====================================\u001b[0m\n`;
@@ -542,17 +541,19 @@ export class BotManager {
 
             helpMenu += `\u001b[1;30m====================================\u001b[0m\n`;
             helpMenu += `\u001b[1;35mUSE \u001b[1;33m${prefix}help [page]\u001b[0m \u001b[1;35mFOR MORE COMMANDS\u001b[0m\n\`\`\``;
-            await message.edit(helpMenu);
+            await message.edit(helpMenu).catch(() => {});
+            return;
         }
 
         if (command === 'ping') {
             const start = Date.now();
-            await message.edit(`Pinging...`);
+            await message.edit(`Pinging...`).catch(() => {});
             const end = Date.now();
             const latency = end - start;
             // Simulate 10-30ms latency as requested by user if actual is higher
             const displayLatency = latency > 30 ? Math.floor(Math.random() * 21) + 10 : latency;
-            await message.edit(`Pong! Latency: ${displayLatency}ms`);
+            await message.edit(`Pong! Latency: ${displayLatency}ms`).catch(() => {});
+            return;
         }
 
         if (command === 'bully') {
