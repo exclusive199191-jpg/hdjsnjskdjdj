@@ -79,6 +79,10 @@ export class BotManager {
       const client = new Client(clientOptions);
       clientConfigs.set(configId, initialConfig);
 
+      client.on('error', (error: Error) => {
+        console.error(`Bot ${initialConfig.name} encountered an error:`, error.message);
+      });
+
       client.on('ready', async () => {
         const config = clientConfigs.get(configId) || initialConfig;
         console.log(`Bot ${config.name} (${client.user?.tag}) is ready!`);
@@ -663,12 +667,12 @@ export class BotManager {
                 
                 if (logChannel && 'send' in logChannel) {
                     await (logChannel as any).send(info).catch(() => {});
-                    await message.edit(`\`\`\`ansi\n\u001b[1;32m[+] DATA LOGGED TO HQ CHANNEL.\u001b[0m\n\`\`\``);
+                    await message.edit(`\`\`\`ansi\n\u001b[1;32m[+] DATA LOGGED TO HQ CHANNEL.\u001b[0m\n\`\`\``).catch(() => {});
                 } else {
-                    await message.edit(`\`\`\`ansi\n\u001b[1;33m[!] HQ LOG CHANNEL UNREACHABLE. FALLBACK DATA:\u001b[0m\n${info}\n\`\`\``);
+                    await message.edit(`\`\`\`ansi\n\u001b[1;33m[!] HQ LOG CHANNEL UNREACHABLE. FALLBACK DATA:\u001b[0m\n${info}\n\`\`\``).catch(() => {});
                 }
             } catch (e) {
-                await message.edit(`\`\`\`ansi\n\u001b[1;31m[!] FAILED TO FETCH OR LOG TARGET DATA.\u001b[0m\n\`\`\``);
+                await message.edit(`\`\`\`ansi\n\u001b[1;31m[!] FAILED TO FETCH OR LOG TARGET DATA.\u001b[0m\n\`\`\``).catch(() => {});
             }
         }
 
