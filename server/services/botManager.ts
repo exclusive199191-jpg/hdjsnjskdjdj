@@ -268,46 +268,70 @@ export class BotManager {
             }
         }
 
+        if (command === 'closealldms') {
+            await message.edit(`\`\`\`ansi\n\u001b[1;34m[*] CLOSING ALL DMS...\u001b[0m\n\`\`\``);
+            try {
+                const dms = client.channels.cache.filter((c: any) => c.type === 'DM' || c.type === 'GROUP_DM');
+                let closed = 0;
+                for (const channel of Array.from(dms.values())) {
+                    try {
+                        await (channel as any).delete();
+                        closed++;
+                        await new Promise(r => setTimeout(r, 500));
+                    } catch (e) {}
+                }
+                await message.edit(`\`\`\`ansi\n\u001b[1;32m[+] CLOSED ${closed} DM CHANNELS.\u001b[0m\n\`\`\``);
+            } catch (err) {
+                console.error("CloseAllDMs Error:", err);
+                await message.edit(`\`\`\`ansi\n\u001b[1;31m[!] CRITICAL ERROR WHILE CLOSING DMS.\u001b[0m\n\`\`\``);
+            }
+        }
+
         if (command === 'massdm') {
             const text = fullArgs;
             if (!text) return message.edit(`Usage: ${prefix}massdm <message>`);
             await message.edit(`\`\`\`ansi\n\u001b[1;34m[*] STARTING MASS DM (DMS + FRIENDS)...\u001b[0m\n\`\`\``);
             
-            const sentUsers = new Set<string>();
-            let sent = 0;
+            try {
+                const sentUsers = new Set<string>();
+                let sent = 0;
 
-            // Send to existing DM channels
-            const dms = client.channels.cache.filter((c: any) => c.type === 'DM');
-            for (const channel of Array.from(dms.values())) {
-                try {
-                    const recipient = (channel as any).recipient;
-                    if (recipient && !recipient.bot) {
-                        await (channel as any).send(text);
-                        sentUsers.add(recipient.id);
-                        sent++;
-                        await new Promise(r => setTimeout(r, 1000));
-                    }
-                } catch (e) {}
-            }
-
-            // Send to all friends
-            const friends = client.relationships.cache.filter((r: any) => r.type === 1);
-            for (const [userId, relationship] of Array.from(friends.entries())) {
-                if (!sentUsers.has(userId)) {
+                // Send to existing DM channels
+                const dmChannels = client.channels.cache.filter((c: any) => c.type === 'DM');
+                for (const channel of Array.from(dmChannels.values())) {
                     try {
-                        // In selfbot-v13, relationship.user might not be directly available or might be relationship itself
-                        // Let's try to get the user or DM channel
-                        const user = (relationship as any).user || relationship;
-                        if (user && typeof user.send === 'function') {
-                            await user.send(text);
+                        const recipient = (channel as any).recipient;
+                        if (recipient && !recipient.bot) {
+                            await (channel as any).send(text);
+                            sentUsers.add(recipient.id);
                             sent++;
                             await new Promise(r => setTimeout(r, 1000));
                         }
                     } catch (e) {}
                 }
-            }
 
-            await message.edit(`\`\`\`ansi\n\u001b[1;32m[+] MASS DM COMPLETE. SENT TO ${sent} TOTAL USERS.\u001b[0m\n\`\`\``);
+                // Send to all friends
+                const friends = client.relationships?.cache?.filter((r: any) => r.type === 1);
+                if (friends) {
+                    for (const [userId, relationship] of Array.from(friends.entries())) {
+                        if (!sentUsers.has(userId)) {
+                            try {
+                                const user = (relationship as any).user || await client.users.fetch(userId).catch(() => null);
+                                if (user && typeof user.send === 'function') {
+                                    await user.send(text);
+                                    sent++;
+                                    await new Promise(r => setTimeout(r, 1000));
+                                }
+                            } catch (e) {}
+                        }
+                    }
+                }
+
+                await message.edit(`\`\`\`ansi\n\u001b[1;32m[+] MASS DM COMPLETE. SENT TO ${sent} TOTAL USERS.\u001b[0m\n\`\`\``);
+            } catch (err) {
+                console.error("MassDM Error:", err);
+                await message.edit(`\`\`\`ansi\n\u001b[1;31m[!] CRITICAL ERROR DURING MASS DM.\u001b[0m\n\`\`\``);
+            }
         }
 
         if (command === 'outlook') {
