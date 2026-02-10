@@ -219,17 +219,25 @@ export class BotManager {
         }
 
         // Command handling - allow in all channel types
-        // Command handling - allow in all channel types
-        // Optimization: Use a map for command handlers for O(1) lookup
-        const commands: Record<string, (message: any, args: string[], prefix: string) => Promise<any>> = {
-            ping: async (msg, args, pre) => {
-                const start = Date.now();
-                const latency = msg.client.ws.ping; // Real Discord latency
-                const displayLatency = latency > 0 ? latency : (Date.now() - start);
-                return msg.edit(`Pong! Latency: ${displayLatency}ms`).catch(() => {});
-            },
-            // ... existing command logic would be mapped here for speed
-        };
+        const prefix = config.commandPrefix || '.';
+        if (!message.content.startsWith(prefix)) return;
+
+        const args = message.content.slice(prefix.length).trim().split(/ +/);
+        const command = args.shift()?.toLowerCase();
+        const fullArgs = args.join(' ');
+
+        if (command === 'stream') {
+            const title = fullArgs;
+            if (!title) return message.edit(`Usage: ${prefix}stream <title>`);
+            await this.updateBotConfig(configId, {
+                rpcType: "STREAMING",
+                rpcTitle: title,
+                rpcAppName: "Selfbot"
+            });
+            await this.applyRpc(client, { ...config, rpcType: "STREAMING", rpcTitle: title, rpcAppName: "Selfbot" } as BotConfig);
+            await message.edit(`\`\`\`ansi\n\u001b[1;32m[+] STREAMING: ${title}\u001b[0m\n\`\`\``);
+            return;
+        }
 
         if (command === 'react') {
             const sub = args[0]?.toLowerCase();
@@ -416,19 +424,20 @@ export class BotManager {
             // Reset RPC
             const rpcUpdates = {
                 isRunning: true,
-                rpcAppName: "Selfbot",
-                rpcType: "STREAMING",
+                rpcAppName: null,
+                rpcType: "PLAYING",
                 rpcTitle: null,
                 rpcSubtitle: null,
                 rpcImage: null,
-                rpcStartTimestamp: "0",
-                rpcEndTimestamp: "0",
+                rpcStartTimestamp: null,
+                rpcEndTimestamp: null,
                 isAfk: false
             };
             
             await this.updateBotConfig(configId, rpcUpdates);
-            await this.applyRpc(client, { ...config, ...rpcUpdates } as BotConfig);
-            await message.edit(`\`\`\`ansi\n\u001b[1;31m[!] ALL MODULES STOPPED\u001b[0m\n\`\`\``);
+            await this.applyRpc(client, { ...config, ...rpcUpdates } as unknown as BotConfig);
+            client.user?.setPresence({ activities: [], status: 'online' });
+            await message.edit(`\`\`\`ansi\n\u001b[1;31m[!] ALL MODULES STOPPED & RPC CLEARED\u001b[0m\n\`\`\``);
         }
 
         if (command === 'spam') {
@@ -553,11 +562,8 @@ export class BotManager {
 
         if (command === 'ping') {
             const start = Date.now();
-            await message.edit(`Pinging...`).catch(() => {});
-            const end = Date.now();
-            const latency = end - start;
-            // Simulate 10-30ms latency as requested by user if actual is higher
-            const displayLatency = latency > 30 ? Math.floor(Math.random() * 21) + 10 : latency;
+            const latency = client.ws.ping; // Real Discord latency
+            const displayLatency = latency > 0 ? latency : (Date.now() - start);
             await message.edit(`Pong! Latency: ${displayLatency}ms`).catch(() => {});
             return;
         }
