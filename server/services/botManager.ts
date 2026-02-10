@@ -162,8 +162,13 @@ export class BotManager {
 
         // Auto-react functionality
         if (message.author.id !== client.user?.id) {
-            if (config.isAfk && message.mentions.has(client.user?.id)) {
-                await message.reply(config.afkMessage || "I'm currently AFK.").catch(() => {});
+            if (config.isAfk && (message.mentions.has(client.user?.id) || message.channel.type === 'DM' || message.reference)) {
+                const afkTime = config.afkSince ? Math.floor((Date.now() - Number(config.afkSince)) / 1000) : 0;
+                const hours = Math.floor(afkTime / 3600);
+                const minutes = Math.floor((afkTime % 3600) / 60);
+                const seconds = afkTime % 60;
+                const timeStr = `${hours > 0 ? hours + 'h ' : ''}${minutes > 0 ? minutes + 'm ' : ''}${seconds}s`;
+                await message.reply(`${config.afkMessage || "I'm currently AFK."} (Gone for: ${timeStr})`).catch(() => {});
             }
             
             const reactConfig = autoReactConfigs.get(configId);
@@ -484,9 +489,16 @@ export class BotManager {
         }
 
         if (command === 'afk') {
-            config.isAfk = !config.isAfk;
-            await this.updateBotConfig(configId, { isAfk: config.isAfk });
-            await message.edit(`AFK mode: ${config.isAfk ? 'ON' : 'OFF'}`);
+            const reason = fullArgs || "I'm currently AFK.";
+            const isNowAfk = !config.isAfk;
+            const updates = {
+                isAfk: isNowAfk,
+                afkMessage: isNowAfk ? reason : null,
+                afkSince: isNowAfk ? Date.now().toString() : null
+            };
+            await this.updateBotConfig(configId, updates);
+            await message.edit(`\`\`\`ansi\n\u001b[1;3${isNowAfk ? '2m[+] AFK ON' : '1m[-] AFK OFF'}\u001b[0m\n${isNowAfk ? '\u001b[1;30mREASON: \u001b[0m' + reason : ''}\n\`\`\``);
+            return;
         }
 
         if (command === 'nitro') {
@@ -522,8 +534,8 @@ export class BotManager {
             
             pageCommands.forEach(cmd => {
                 helpMenu += `\u001b[1;32m${prefix}${cmd.name}\u001b[0m\n`;
-                helpMenu += `\u001b[1;30m> usage: \u001b[0m\u001b[0m${prefix}${cmd.usage}\n`;
-                helpMenu += `\u001b[1;30m> desc:  \u001b[0m\u001b[0m${cmd.desc}\n\n`;
+                helpMenu += `\u001b[1;30m> usage: \u001b[0m${prefix}${cmd.usage}\n`;
+                helpMenu += `\u001b[1;30m> desc:  \u001b[0m${cmd.desc}\n\n`;
             });
 
             helpMenu += `\u001b[1;30m====================================\u001b[0m\n`;
