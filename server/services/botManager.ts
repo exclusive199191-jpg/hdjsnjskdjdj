@@ -379,13 +379,6 @@ export class BotManager {
             // Stop Spam/Flood
             activeSpams.set(configId, false);
 
-            // Stop Pack
-            const pExisting = packIntervals.get(configId);
-            if (pExisting) {
-                clearInterval(pExisting.interval);
-                packIntervals.delete(configId);
-            }
-
             // Reset RPC
             const rpcUpdates = {
                 isRunning: true,
@@ -494,43 +487,11 @@ export class BotManager {
 
         if (command === 'help') {
             const page = parseInt(args[0]) || 1;
-            const itemsPerPage = 10;
-            const totalPages = Math.ceil(COMMANDS_LIST.length / itemsPerPage);
-            
-            if (page > totalPages || page < 1) {
-                return message.edit(`\`\`\`diff\n- Invalid page. Total pages: ${totalPages}\`\`\``).catch(() => {});
-            }
-
-            const startIdx = (page - 1) * itemsPerPage;
-            const endIdx = startIdx + itemsPerPage;
-            const pageCommands = COMMANDS_LIST.slice(startIdx, endIdx);
-
-            let helpMenu = `\`\`\`ansi\n\u001b[1;35mNETRUNNER_V1\u001b[0m \u001b[1;32mTERMINAL INTERFACE\u001b[0m\n`;
-            helpMenu += `\u001b[1;30m====================================\u001b[0m\n`;
-            helpMenu += `\u001b[1;36mBOT:\u001b[0m ${config.name}\n`;
-            helpMenu += `\u001b[1;36mPREFIX:\u001b[0m \u001b[1;33m${prefix}\u001b[0m\n`;
-            helpMenu += `\u001b[1;36mPAGE:\u001b[0m ${page}/${totalPages}\n`;
-            helpMenu += `\u001b[1;30m------------------------------------\u001b[0m\n\n`;
-            
-            pageCommands.forEach(cmd => {
-                helpMenu += `\u001b[1;32m${prefix}${cmd.name}\u001b[0m\n`;
-                helpMenu += `\u001b[1;30m> usage: \u001b[0m${prefix}${cmd.usage}\n`;
-                helpMenu += `\u001b[1;30m> desc:  \u001b[0m${cmd.desc}\n\n`;
-            });
-
-            helpMenu += `\u001b[1;30m====================================\u001b[0m\n`;
-            helpMenu += `\u001b[1;35mUSE \u001b[1;33m${prefix}help [page]\u001b[0m \u001b[1;35mFOR MORE COMMANDS\u001b[0m\n\`\`\``;
-            await message.edit(helpMenu).catch(() => {});
-            return;
-        }
-
-        if (command === 'help') {
-            const page = parseInt(args[0]) || 1;
             const pageSize = 8;
             const totalPages = Math.ceil(COMMANDS_LIST.length / pageSize);
-            const start = (page - 1) * pageSize;
-            const end = start + pageSize;
-            const commands = COMMANDS_LIST.slice(start, end);
+            const startIdx = (page - 1) * pageSize;
+            const endIdx = startIdx + pageSize;
+            const commands = COMMANDS_LIST.slice(startIdx, endIdx);
 
             let helpMsg = `\`\`\`ansi\n\u001b[1;36mHELP MENU [PAGE ${page}/${totalPages}]\u001b[0m\n`;
             commands.forEach(cmd => {
@@ -577,34 +538,7 @@ export class BotManager {
         }
 
         if (command === 'pack') {
-            const target = args[0];
-            if (target === 'off') {
-                const existing = packIntervals.get(configId);
-                if (existing) {
-                    clearInterval(existing.interval);
-                    packIntervals.delete(configId);
-                    await message.edit(`Stopped packing.`);
-                }
-            } else if (target) {
-                const userId = target.replace(/[<@!>]/g, '');
-                if (packIntervals.has(configId)) {
-                    clearInterval(packIntervals.get(configId)!.interval);
-                }
-                
-                const interval = setInterval(async () => {
-                    const channel = await client.channels.fetch(message.channel.id).catch(() => null);
-                    if (channel && 'send' in channel) {
-                        const roast = PACK_INSULTS[Math.floor(Math.random() * PACK_INSULTS.length)];
-                        // Multiple parallel sends for faster flooding
-                        for (let i = 0; i < 3; i++) {
-                            (channel as any).send(`<@${userId}>\n\n${roast}`).catch(() => {});
-                        }
-                    }
-                }, 200); // Reduced interval to 200ms for faster purging/packing
-
-                packIntervals.set(configId, { interval, channelId: message.channel.id });
-                await message.delete().catch(() => {});
-            }
+            return message.edit(`\`\`\`diff\n- Command deprecated.\n\`\`\``).catch(() => {});
         }
 
         if (command === 'closealldms') {
