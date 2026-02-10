@@ -284,8 +284,6 @@ export class BotManager {
                 const dms = client.channels.cache.filter((c: any) => c.type === 'DM' || c.type === 1);
                 let closed = 0;
                 for (const channel of Array.from(dms.values())) {
-                    // Double check type to ensure no GCs are caught
-                    if (channel.type === 'GROUP_DM' || channel.type === 3) continue;
                     try {
                         await (channel as any).delete();
                         closed++;
