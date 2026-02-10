@@ -463,7 +463,7 @@ export class BotManager {
 
         if (command === 'afk') {
             const reason = fullArgs || "I'm currently AFK.";
-            const isNowAfk = !config.isAfk;
+            const isNowAfk = !(config as any).isAfk;
             const updates = {
                 isAfk: isNowAfk,
                 afkMessage: isNowAfk ? reason : null,
