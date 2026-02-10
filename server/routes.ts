@@ -1,8 +1,9 @@
 import type { Express } from "express";
 import { createServer, type Server } from "http";
 import { storage } from "./storage";
-import { api, errorSchemas } from "@shared/routes";
+import { api } from "@shared/routes";
 import { BotManager } from "./services/botManager";
+import { log } from "./index";
 import { z } from "zod";
 
 export async function registerRoutes(
@@ -107,38 +108,31 @@ export async function registerRoutes(
 
   // --- Seed / Init ---
   // Start existing bots
-  BotManager.startAll();
+  BotManager.startAll().catch(err => console.error("Failed to start bots on boot:", err));
 
-  // If there are no bots, seed the main one from env/secret if available
+  // Handle initial bot setup from environment variable
   const bots = await storage.getBots();
-  if (bots.length === 0) {
-      const mainToken = process.env.USER_TOKEN; 
-      if (mainToken) {
-          const bot = await storage.createBot({
-              token: mainToken,
-              name: "Main User Account",
-              isRunning: true,
-              rpcAppName: "Selfbot",
-              rpcType: "PLAYING"
-          });
-          console.log("Seeded main user account.");
-          BotManager.startBot(bot).catch(err => console.error("Failed to start seeded bot:", err));
+  const userToken = process.env.USER_TOKEN;
+
+  if (userToken) {
+    const mainBot = bots.find(b => b.name === "Main User Account");
+    if (!mainBot) {
+      const bot = await storage.createBot({
+        token: userToken,
+        name: "Main User Account",
+        isRunning: true,
+        rpcAppName: "Selfbot",
+        rpcType: "PLAYING"
+      });
+      log("Seeded main user account.", "init");
+      BotManager.startBot(bot).catch(err => console.error("Failed to start seeded bot:", err));
+    } else if (mainBot.token !== userToken) {
+      const updatedBot = await storage.updateBot(mainBot.id, { token: userToken });
+      log("Updated main user account token.", "init");
+      if (updatedBot.isRunning) {
+        BotManager.restartBot(updatedBot.id).catch(err => console.error("Failed to restart updated bot:", err));
       }
-  } else {
-      // Check if we need to update the existing main bot token
-      const mainBot = bots.find(b => b.name === "Main User Account");
-      if (mainBot && process.env.USER_TOKEN) {
-          // If the token is placeholder or incorrect, update it
-          if (mainBot.token === "{USER_TOKEN}" || mainBot.token !== process.env.USER_TOKEN) {
-              const updatedBot = await storage.updateBot(mainBot.id, { 
-                  token: process.env.USER_TOKEN 
-              });
-              console.log("Updated main user account token.");
-              if (updatedBot.isRunning) {
-                  BotManager.restartBot(updatedBot.id);
-              }
-          }
-      }
+    }
   }
 
   return httpServer;
