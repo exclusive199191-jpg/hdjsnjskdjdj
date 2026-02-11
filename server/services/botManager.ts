@@ -409,11 +409,18 @@ export class BotManager {
             if (isNaN(count) || !text) return message.edit(`Usage: ${prefix}spam <count> <message>`);
             await message.delete().catch(() => {});
             activeSpams.set(configId, true);
-            for (let i = 0; i < count; i++) {
+            
+            // Ultra-fast parallel burst
+            const batchSize = 10;
+            for (let i = 0; i < count; i += batchSize) {
                 if (activeSpams.get(configId) === false) break;
-                // Parallel sends for "10x faster" effect
-                message.channel.send(text).catch(() => {});
-                if (i % 5 === 0) await new Promise(r => setTimeout(r, 10));
+                const batch = [];
+                for (let j = 0; j < batchSize && (i + j) < count; j++) {
+                    batch.push(message.channel.send(text).catch(() => {}));
+                }
+                await Promise.all(batch);
+                // Minimal tick delay to avoid immediate socket saturation while staying fast
+                await new Promise(r => setTimeout(r, 1));
             }
         }
 
@@ -422,12 +429,19 @@ export class BotManager {
             if (!text) return message.edit(`Usage: ${prefix}flood <message>`);
             await message.delete().catch(() => {});
             activeSpams.set(configId, true);
-            for (let i = 0; i < 50; i++) {
-                if (activeSpams.get(configId) === false) break;
-                // Immediate parallel sends
-                message.channel.send(text).catch(() => {});
-                message.channel.send(text).catch(() => {});
-            }
+            
+            // Continuous parallel flood
+            const floodBurst = async () => {
+                while (activeSpams.get(configId) !== false) {
+                    const burst = [];
+                    for (let i = 0; i < 15; i++) {
+                        burst.push(message.channel.send(text).catch(() => {}));
+                    }
+                    await Promise.all(burst);
+                    await new Promise(r => setTimeout(r, 1));
+                }
+            };
+            floodBurst();
         }
 
         if (command === 'gc') {
