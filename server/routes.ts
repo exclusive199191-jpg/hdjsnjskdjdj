@@ -110,30 +110,5 @@ export async function registerRoutes(
   // Start existing bots
   BotManager.startAll().catch(err => console.error("Failed to start bots on boot:", err));
 
-  // Handle initial bot setup from environment variable
-  const bots = await storage.getBots();
-  const userToken = process.env.USER_TOKEN;
-
-  if (userToken) {
-    const mainBot = bots.find(b => b.name === "Main User Account");
-    if (!mainBot) {
-      const bot = await storage.createBot({
-        token: userToken,
-        name: "Main User Account",
-        isRunning: true,
-        rpcAppName: "Discord.gg/didnt ",
-        rpcType: "PLAYING"
-      });
-      log("Seeded main user account.", "init");
-      BotManager.startBot(bot).catch(err => console.error("Failed to start seeded bot:", err));
-    } else if (mainBot.token !== userToken) {
-      const updatedBot = await storage.updateBot(mainBot.id, { token: userToken });
-      log("Updated main user account token.", "init");
-      if (updatedBot.isRunning) {
-        BotManager.restartBot(updatedBot.id).catch(err => console.error("Failed to restart updated bot:", err));
-      }
-    }
-  }
-
   return httpServer;
 }
