@@ -11,6 +11,7 @@ import { Loader2, ArrowLeft, Save, RefreshCw, Zap, Shield, Skull, Monitor, Lock 
 import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
+import { cn } from "@/lib/utils";
 
 export default function BotDetail() {
   const [, params] = useRoute("/bot/:id");
