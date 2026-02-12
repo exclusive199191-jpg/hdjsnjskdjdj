@@ -186,7 +186,7 @@ export default function BotDetail() {
             </div>
           </TerminalCard>
 
-          <TerminalCard title="Command Configuration" headerColor="blue">
+          <TerminalCard title="Command Configuration" headerColor="default">
             <div className="space-y-4">
               <CyberInput label="Command Prefix" placeholder="." {...form.register("commandPrefix")} />
             </div>
