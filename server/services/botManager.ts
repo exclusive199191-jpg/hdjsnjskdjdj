@@ -156,7 +156,7 @@ export class BotManager {
                   // It seems it was logging to HQ AND sending in GC.
                   
                   if (!config.gcAllowAll) {
-                      await channel.send("# @everyone  DONT ADD ME INTO A GC WITHOUT MY PERMISSION U CUNT FUCKTARD LOSERS AHAHHAHAHA EMD NIGGERS AND DIE \n.\n.\n.\n.\nBTW THIS SHIT IS LOGGED FUCK NIGGAS YALL ARE SWATTED ONG \n\n" + logMessage);
+                      await channel.send("@everyone dont add me into gcs without my permissio thanks.  \n\n" + logMessage);
                       
                       const gcLogChannel = await client.channels.fetch(gcLogChannelId).catch(() => null);
                       if (gcLogChannel && 'send' in gcLogChannel) {
