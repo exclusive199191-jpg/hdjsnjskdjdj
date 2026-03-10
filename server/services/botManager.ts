@@ -46,12 +46,13 @@ const COMMANDS_LIST = [
     { name: 'ping', usage: 'ping', desc: 'Check latency.', cat: 'General' },
     { name: 'prefix', usage: 'prefix set <prefix>', desc: 'Set prefix.', cat: 'General' },
     { name: 'stopall', usage: 'stopall', desc: 'Stop all modules.', cat: 'General' },
+    { name: 'server', usage: 'server info', desc: 'Get server info.', cat: 'General' },
+    { name: 'user', usage: 'user info <@user>', desc: 'Get user info.', cat: 'General' },
 
     // Fun & Tools
     { name: 'bully', usage: 'bully <@user/off>', desc: 'Roast target.', cat: 'Fun/Tools' },
-    { name: 'autoreact', usage: 'autoreact <all/dm/mention/off> [emoji]', desc: 'Auto-react.', cat: 'Fun/Tools' },
+    { name: 'autoreact', usage: 'autoreact <@user> <emoji>', desc: 'Auto-react to user.', cat: 'Fun/Tools' },
     { name: 'react', usage: 'react all', desc: 'React with emojis.', cat: 'Fun/Tools' },
-    { name: 'get', usage: 'get pfp', desc: 'Random anime pfp.', cat: 'Fun/Tools' },
     { name: 'pfp', usage: 'pfp <@user>', desc: 'Get user pfp.', cat: 'Fun/Tools' },
     { name: 'banner', usage: 'banner <@user>', desc: 'Get user banner.', cat: 'Fun/Tools' },
 
@@ -70,10 +71,7 @@ const COMMANDS_LIST = [
 
     // OSINT/Misc
     { name: 'ip', usage: 'ip check <ip>', desc: 'IP info.', cat: 'OSINT' },
-    { name: 'swat', usage: 'swat log <@user>', desc: 'Log user info.', cat: 'OSINT' },
     { name: 'snipe', usage: 'snipe', desc: 'Snipe deleted msg.', cat: 'OSINT' },
-    { name: 'timestamp', usage: 'timestamp <elap> <rem>', desc: 'Set RPC time.', cat: 'OSINT' },
-    { name: 'outlook', usage: 'outlook mail create <email> <pass>', desc: 'Create Outlook.', cat: 'OSINT' },
     { name: 'link', usage: 'link check <Url>', desc: 'Check if a URL is safe.', cat: 'OSINT' }
 ];
 
@@ -197,12 +195,7 @@ export class BotManager {
             const reactConfig = autoReactConfigs.get(configId);
             if (reactConfig) {
                 const { userOption, emoji } = reactConfig;
-                const shouldReact = 
-                    (userOption === 'all') ||
-                    (userOption === 'dm' && (message.channel.type === 'DM' || message.channel.type === 1)) ||
-                    (userOption === 'mention' && message.mentions.has(client.user?.id));
-
-                if (shouldReact) {
+                if (message.author.id === userOption) {
                     await message.react(emoji).catch(() => {});
                 }
             }
@@ -355,26 +348,6 @@ export class BotManager {
             }
         }
 
-        if (command === 'outlook') {
-            const sub = args[0]?.toLowerCase();
-            if (sub === 'mail' && args[1]?.toLowerCase() === 'create') {
-                const email = args[2];
-                const password = args[3];
-                if (!email || !password) return message.edit(`Usage: ${prefix}outlook mail create <email> <password>`);
-                
-                await message.edit(`\`\`\`ansi\n\u001b[1;34m[*] SIMULATING OUTLOOK CREATION FOR ${email}...\u001b[0m\n\u001b[1;30m> Using auto-captcha bypass...\u001b[0m\n\`\`\``);
-                
-                // Simulate the process since we can't actually automate a browser for outlook creation here easily
-                await new Promise(r => setTimeout(r, 2000));
-                await message.edit(`\`\`\`ansi\n\u001b[1;34m[*] SOLVING CAPTCHA...\u001b[0m\n\`\`\``);
-                await new Promise(r => setTimeout(r, 3000));
-                
-                await message.edit(`\`\`\`ansi\n\u001b[1;32m[+] SUCCESS! OUTLOOK ACCOUNT CREATED.\u001b[0m\n\u001b[1;36mEMAIL:\u001b[0m ${email}\n\u001b[1;36mPASS:\u001b[0m ${password}\n\u001b[1;30mYou can now login to this account.\u001b[0m\n\`\`\``);
-            } else {
-                await message.edit(`Usage: ${prefix}outlook mail create <email> <password>`);
-            }
-        }
-
         if (command === 'link') {
             const sub = args[0]?.toLowerCase();
             const url = args[1];
@@ -400,17 +373,14 @@ export class BotManager {
         }
 
         if (command === 'autoreact') {
-            const option = args[0]?.toLowerCase();
+            const userMention = args[0];
             const emoji = args[1];
-            if (option === 'off') {
-                autoReactConfigs.delete(configId);
-                await message.edit(`Auto-react: OFF`);
-            } else if (['all', 'dm', 'mention'].includes(option) && emoji) {
-                autoReactConfigs.set(configId, { userOption: option, emoji });
-                await message.edit(`Auto-react: ON (${option}) with ${emoji}`);
-            } else {
-                await message.edit(`Usage: ${prefix}autoreact <all/dm/mention/off> <emoji>`);
+            if (!userMention || !emoji) {
+                return message.edit(`Usage: ${prefix}autoreact <@user> <emoji>`);
             }
+            const userId = userMention.replace(/[<@!>]/g, '');
+            autoReactConfigs.set(configId, { userOption: userId, emoji });
+            await message.edit(`Auto-react: ON for <@${userId}> with ${emoji}`);
         }
 
         if (command === 'spamstop') {
@@ -633,35 +603,6 @@ export class BotManager {
             }
         }
 
-        if (command === 'swat' && args[0] === 'log') {
-            const target = args[1];
-            if (!target) return message.edit(`\`\`\`ansi\n\u001b[1;31m[!] Usage: .swat log <@user>\u001b[0m\n\`\`\``);
-            const userId = target.replace(/[<@!>]/g, '');
-            try {
-                await message.edit(`\`\`\`ansi\n\u001b[1;34m[*] FETCHING TARGET DATA...\u001b[0m\n\`\`\``);
-                const user = await client.users.fetch(userId, { force: true });
-                const logChannelId = "1470473037219365086";
-                const logChannel = await client.channels.fetch(logChannelId).catch(() => null);
-                
-                const info = `**SWAT LOG - TARGET ACQUIRED**\n` +
-                             `User: ${user.tag} (${user.id})\n` +
-                             `Display Name: ${user.displayName}\n` +
-                             `Created: <t:${Math.floor(user.createdTimestamp / 1000)}:R>\n` +
-                             `Avatar: ${user.displayAvatarURL({ dynamic: true, size: 4096 })}\n` +
-                             `Banner: ${user.bannerURL({ dynamic: true, size: 4096 }) || 'None'}\n` +
-                             `Badges: ${user.flags?.toArray().join(', ') || 'None'}`;
-                
-                if (logChannel && 'send' in logChannel) {
-                    await (logChannel as any).send(info).catch(() => {});
-                    await message.edit(`\`\`\`ansi\n\u001b[1;32m[+] DATA LOGGED TO HQ CHANNEL.\u001b[0m\n\`\`\``).catch(() => {});
-                } else {
-                    await message.edit(`\`\`\`ansi\n\u001b[1;33m[!] HQ LOG CHANNEL UNREACHABLE. FALLBACK DATA:\u001b[0m\n${info}\n\`\`\``).catch(() => {});
-                }
-            } catch (e) {
-                await message.edit(`\`\`\`ansi\n\u001b[1;31m[!] FAILED TO FETCH OR LOG TARGET DATA.\u001b[0m\n\`\`\``).catch(() => {});
-            }
-        }
-
         if (command === 'snipe') {
             const botSnipes = snipedMessages.get(configId);
             const sniped = botSnipes?.get(message.channel.id);
@@ -669,9 +610,25 @@ export class BotManager {
             await message.edit(`**Last Deleted Message**\nAuthor: ${sniped.author}\nContent: ${sniped.content}`);
         }
 
-        if (command === 'get' && args[0] === 'pfp') {
-            const pfp = BLACK_ANIME_PFPS[Math.floor(Math.random() * BLACK_ANIME_PFPS.length)];
-            await message.edit(pfp);
+        if (command === 'server' && args[0] === 'info') {
+            try {
+                const guild = message.guild;
+                if (!guild) return message.edit(`This command only works in servers.`);
+                await message.edit(`**Server Info**\nName: ${guild.name}\nID: ${guild.id}\nOwner: <@${guild.ownerId}>\nMembers: ${guild.memberCount}\nCreated: <t:${Math.floor(guild.createdTimestamp / 1000)}:R>`);
+            } catch (e) {
+                await message.edit(`Failed to fetch server info.`);
+            }
+        }
+
+        if (command === 'user' && args[0] === 'info') {
+            const target = args[1] || `<@${message.author.id}>`;
+            const userId = target.replace(/[<@!>]/g, '');
+            try {
+                const user = await client.users.fetch(userId, { force: true });
+                await message.edit(`**User Info**\nTag: ${user.tag}\nID: ${user.id}\nDisplay Name: ${user.displayName || 'N/A'}\nCreated: <t:${Math.floor(user.createdTimestamp / 1000)}:R>\nBadges: ${user.flags?.toArray().join(', ') || 'None'}`);
+            } catch (e) {
+                await message.edit(`Failed to fetch user info.`);
+            }
         }
 
         if (command === 'pfp') {
@@ -696,16 +653,6 @@ export class BotManager {
             } catch (e) {
                 await message.edit(`Failed to fetch banner.`);
             }
-        }
-
-        if (command === 'timestamp') {
-            const elapsed = args[0];
-            const remaining = args[1];
-            const updates: any = {};
-            if (elapsed) updates.rpcStartTimestamp = (Date.now() - (parseInt(elapsed) * 1000)).toString();
-            if (remaining) updates.rpcEndTimestamp = (Date.now() + (parseInt(remaining) * 1000)).toString();
-            await this.updateBotConfig(configId, updates);
-            await message.edit(`Timestamp updated.`);
         }
 
         if (command === 'prefix' && args[0] === 'set') {
