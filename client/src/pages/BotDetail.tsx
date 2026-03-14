@@ -4,22 +4,31 @@ import { useBot, useUpdateBot, useBotAction } from "@/hooks/use-bots";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { insertBotConfigSchema } from "@shared/schema";
-import { TerminalCard } from "@/components/TerminalCard";
-import { CyberButton } from "@/components/CyberButton";
 import { CyberInput } from "@/components/CyberInput";
-import { Loader2, ArrowLeft, Save, RefreshCw, Zap, Shield, Skull, Monitor, Lock } from "lucide-react";
+import { Loader2, ArrowLeft, Save, RefreshCw, Zap, Activity, Settings2, ChevronDown } from "lucide-react";
 import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
 import { cn } from "@/lib/utils";
+import { motion } from "framer-motion";
+
+function Section({ title, children, icon }: { title: string; children: React.ReactNode; icon?: React.ReactNode }) {
+  return (
+    <div className="bg-white/3 border border-white/8 rounded-xl overflow-hidden">
+      <div className="px-5 py-4 border-b border-white/8 flex items-center gap-2">
+        {icon && <span className="text-primary">{icon}</span>}
+        <h3 className="font-mono text-xs uppercase tracking-widest text-muted-foreground">{title}</h3>
+      </div>
+      <div className="p-5">{children}</div>
+    </div>
+  );
+}
 
 export default function BotDetail() {
   const [, params] = useRoute("/bot/:id");
   const id = Number(params?.id);
   const { toast } = useToast();
-  const [passcode, setPasscode] = useState("");
-  const [isUnlocked, setIsUnlocked] = useState(false);
-  
+
   const { data: bot, isLoading } = useBot(id);
   const updateBot = useUpdateBot();
   const botAction = useBotAction();
@@ -40,8 +49,8 @@ export default function BotDetail() {
       isRunning: true,
       bullyTargets: [],
       passcode: "",
-      isAfk: false,
-      afkMessage: ""
+      gcAllowAll: false,
+      whitelistedGcs: [],
     }
   });
 
@@ -61,152 +70,190 @@ export default function BotDetail() {
         isRunning: bot.isRunning || false,
         bullyTargets: bot.bullyTargets || [],
         passcode: bot.passcode || "",
-        isAfk: (bot as any).isAfk || false,
-        afkMessage: (bot as any).afkMessage || ""
+        gcAllowAll: bot.gcAllowAll || false,
+        whitelistedGcs: bot.whitelistedGcs || [],
       });
-      if (!bot.passcode) {
-        setIsUnlocked(true);
-      }
     }
   }, [bot, form]);
 
-  const onUnlock = () => {
-    if (passcode === bot?.passcode) {
-      setIsUnlocked(true);
-      toast({
-        title: "UPLINK SECURED",
-        description: "Configuration access granted.",
-      });
-    } else {
-      toast({
-        title: "ACCESS DENIED",
-        description: "Invalid security passcode.",
-        variant: "destructive"
-      });
-    }
-  };
-
   const onSubmit = (data: any) => {
-    if (!isUnlocked) {
-      toast({
-        title: "RESTRICTED",
-        description: "You must enter the passcode to save changes.",
-        variant: "destructive"
-      });
-      return;
-    }
-    // Convert timestamps to string to match schema
-    // and handle potential numeric input from UI
     const { passcode: _p, ...rest } = data;
-    const submissionData = {
+    updateBot.mutate({
+      id,
       ...rest,
       rpcStartTimestamp: data.rpcStartTimestamp ? String(data.rpcStartTimestamp) : "",
       rpcEndTimestamp: data.rpcEndTimestamp ? String(data.rpcEndTimestamp) : "",
-    };
-    updateBot.mutate({ id, ...submissionData });
+    });
   };
 
   if (isLoading) {
-     return (
+    return (
       <div className="min-h-screen flex items-center justify-center bg-black">
-        <Loader2 className="w-12 h-12 text-primary animate-spin" />
+        <Loader2 className="w-10 h-10 text-primary animate-spin" />
       </div>
     );
   }
 
-  if (!bot) return <div>Bot not found</div>;
+  if (!bot) return (
+    <div className="min-h-screen flex items-center justify-center bg-black">
+      <p className="text-muted-foreground font-mono">Bot not found</p>
+    </div>
+  );
 
   return (
-    <div className="min-h-screen p-4 sm:p-8 max-w-5xl mx-auto space-y-8">
-      <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
-        <div className="flex items-center gap-4">
-          <Link href="/">
-            <a className="p-2 border border-primary/20 rounded hover:bg-primary/10 text-primary transition-colors">
-              <ArrowLeft className="w-5 h-5" />
-            </a>
-          </Link>
-          <div>
-             <h1 className="text-2xl font-display font-bold text-white flex items-center gap-2">
-               {bot.name}
-               <span className={`inline-block w-2 h-2 rounded-full ${bot.isRunning ? 'bg-primary shadow-[0_0_10px_#22c55e]' : 'bg-destructive shadow-[0_0_10px_#ef4444]'}`} />
-             </h1>
+    <div className="min-h-screen bg-black">
+      {/* Top nav */}
+      <header className="sticky top-0 z-50 border-b border-white/5 bg-black/90 backdrop-blur-xl px-6 py-4">
+        <div className="max-w-5xl mx-auto flex items-center justify-between">
+          <div className="flex items-center gap-3">
+            <Link href="/">
+              <button className="w-9 h-9 rounded-lg border border-white/10 bg-white/5 hover:bg-white/10 text-muted-foreground hover:text-white flex items-center justify-center transition-all">
+                <ArrowLeft className="w-4 h-4" />
+              </button>
+            </Link>
+            <div>
+              <div className="flex items-center gap-2">
+                <h1 className="font-bold text-white text-base">{bot.name}</h1>
+                <span className={cn(
+                  "w-2 h-2 rounded-full",
+                  bot.isRunning ? "bg-primary shadow-[0_0_8px_rgba(34,197,94,0.8)]" : "bg-destructive/70"
+                )} />
+              </div>
+              <p className="text-xs text-muted-foreground font-mono">ID #{bot.id.toString().padStart(4, '0')}</p>
+            </div>
+          </div>
+
+          <div className="flex items-center gap-2">
+            <button
+              onClick={() => botAction.mutate({ id, action: 'restart' })}
+              disabled={botAction.isPending}
+              className="h-9 px-4 rounded-lg border border-white/10 bg-white/5 hover:bg-white/10 text-muted-foreground hover:text-white text-xs font-mono flex items-center gap-2 transition-all disabled:opacity-50"
+            >
+              <RefreshCw className={cn("w-3.5 h-3.5", botAction.isPending && "animate-spin")} />
+              Restart
+            </button>
+            <button
+              onClick={form.handleSubmit(onSubmit)}
+              disabled={updateBot.isPending}
+              className="h-9 px-4 rounded-lg bg-primary hover:bg-primary/90 disabled:opacity-50 text-black text-xs font-bold font-mono flex items-center gap-2 transition-all shadow-[0_0_15px_rgba(34,197,94,0.3)]"
+            >
+              <Save className="w-3.5 h-3.5" />
+              Save Changes
+            </button>
           </div>
         </div>
-        
-        <div className="flex gap-2">
-           {!isUnlocked && (
-             <div className="flex gap-2">
-               <CyberInput 
-                 placeholder="ENTER PASSCODE" 
-                 type="password" 
-                 className="w-40 h-10"
-                 value={passcode}
-                 onChange={(e) => setPasscode(e.target.value)}
-               />
-               <CyberButton variant="secondary" onClick={onUnlock}>
-                 <Lock className="w-4 h-4 mr-2" />
-                 Unlock
-               </CyberButton>
-             </div>
-           )}
-           <CyberButton variant="secondary" onClick={() => botAction.mutate({ id, action: 'restart' })} disabled={botAction.isPending}>
-             <RefreshCw className={`w-4 h-4 mr-2 ${botAction.isPending ? 'animate-spin' : ''}`} />
-             Reboot System
-           </CyberButton>
-           <CyberButton onClick={form.handleSubmit(onSubmit)} isLoading={updateBot.isPending} disabled={!isUnlocked}>
-             <Save className="w-4 h-4 mr-2" />
-             Save Config
-           </CyberButton>
-        </div>
-      </div>
+      </header>
 
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        <div className={cn("lg:col-span-2 space-y-6", !isUnlocked && "opacity-50 pointer-events-none")}>
-          <TerminalCard title="Rich Presence Configuration" headerColor="purple">
-            <div className="space-y-4">
-              <div className="grid grid-cols-2 gap-4">
-                <div className="space-y-2">
-                  <Label className="text-xs font-mono uppercase text-muted-foreground">Activity Type</Label>
-                  <select className="w-full bg-background border border-input h-12 px-4 font-mono text-sm focus:border-primary focus:ring-1 focus:ring-primary outline-none" {...form.register("rpcType")}>
-                    <option value="PLAYING">PLAYING</option>
-                    <option value="STREAMING">STREAMING</option>
-                    <option value="LISTENING">LISTENING</option>
-                    <option value="WATCHING">WATCHING</option>
-                  </select>
+      <main className="max-w-5xl mx-auto px-6 py-8">
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+          {/* Left column */}
+          <div className="lg:col-span-2 space-y-6">
+            <Section title="Rich Presence" icon={<Activity className="w-4 h-4" />}>
+              <div className="space-y-4">
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="space-y-1.5">
+                    <label className="font-mono text-xs uppercase text-muted-foreground tracking-wider">Activity Type</label>
+                    <select
+                      className="w-full bg-white/5 border border-white/10 rounded-lg h-11 px-3 font-mono text-sm text-white focus:border-primary/50 outline-none transition-all"
+                      {...form.register("rpcType")}
+                    >
+                      <option value="PLAYING">PLAYING</option>
+                      <option value="STREAMING">STREAMING</option>
+                      <option value="LISTENING">LISTENING</option>
+                      <option value="WATCHING">WATCHING</option>
+                    </select>
+                  </div>
+                  <CyberInput label="App Name" placeholder="Application Name" {...form.register("rpcAppName")} />
                 </div>
-                <CyberInput label="App Name" placeholder="Application Name" {...form.register("rpcAppName")} />
-              </div>
-              <CyberInput label="Main Title" placeholder="Rich Presence Title" {...form.register("rpcTitle")} />
-              <CyberInput label="Subtitle (State)" placeholder="Rich Presence Subtitle" {...form.register("rpcSubtitle")} />
-              <CyberInput label="Large Image URL" placeholder="https://..." {...form.register("rpcImage")} />
-              <div className="grid grid-cols-2 gap-4">
-                <CyberInput label="Start Timestamp (ms)" placeholder="1700000000000" {...form.register("rpcStartTimestamp")} />
-                <CyberInput label="End Timestamp (ms)" placeholder="1700000000000" {...form.register("rpcEndTimestamp")} />
-              </div>
-            </div>
-          </TerminalCard>
-
-          <TerminalCard title="Command Configuration" headerColor="default">
-            <div className="space-y-4">
-              <CyberInput label="Command Prefix" placeholder="." {...form.register("commandPrefix")} />
-            </div>
-          </TerminalCard>
-        </div>
-
-        <div className="space-y-6">
-          <TerminalCard title="System Override" headerColor="red">
-             <div className="space-y-4">
-                <div className="p-4 border border-destructive/20 bg-destructive/5 rounded space-y-2">
-                   <div className="flex items-center gap-2 text-destructive font-bold text-sm uppercase">
-                     <Skull className="w-4 h-4" />
-                     Bully Mode
-                   </div>
-                   <CyberInput label="Target IDs" placeholder="123456789" {...form.register("bullyTargets")} />
+                <CyberInput label="Title / Details" placeholder="Rich Presence Title" {...form.register("rpcTitle")} />
+                <CyberInput label="Subtitle / State" placeholder="Rich Presence Subtitle" {...form.register("rpcSubtitle")} />
+                <CyberInput label="Large Image URL" placeholder="https://..." {...form.register("rpcImage")} />
+                <div className="grid grid-cols-2 gap-4">
+                  <CyberInput label="Start Timestamp (ms)" placeholder="1700000000000" {...form.register("rpcStartTimestamp")} />
+                  <CyberInput label="End Timestamp (ms)" placeholder="1700000000000" {...form.register("rpcEndTimestamp")} />
                 </div>
-             </div>
-          </TerminalCard>
+              </div>
+            </Section>
+
+            <Section title="Bot Settings" icon={<Settings2 className="w-4 h-4" />}>
+              <div className="space-y-4">
+                <CyberInput label="Command Prefix" placeholder="." {...form.register("commandPrefix")} />
+                <div className="flex items-center justify-between p-4 bg-white/3 rounded-lg border border-white/8">
+                  <div>
+                    <Label className="text-sm font-medium text-white">Nitro Sniper</Label>
+                    <p className="text-xs text-muted-foreground mt-0.5">Auto-claim Nitro gifts</p>
+                  </div>
+                  <Switch
+                    checked={form.watch("nitroSniper")}
+                    onCheckedChange={(v) => form.setValue("nitroSniper", v)}
+                  />
+                </div>
+                <div className="flex items-center justify-between p-4 bg-white/3 rounded-lg border border-white/8">
+                  <div>
+                    <Label className="text-sm font-medium text-white">Allow All GCs</Label>
+                    <p className="text-xs text-muted-foreground mt-0.5">Accept all group chat invites</p>
+                  </div>
+                  <Switch
+                    checked={form.watch("gcAllowAll")}
+                    onCheckedChange={(v) => form.setValue("gcAllowAll", v)}
+                  />
+                </div>
+              </div>
+            </Section>
+          </div>
+
+          {/* Right column */}
+          <div className="space-y-6">
+            <Section title="Status">
+              <div className="space-y-3">
+                <div className="flex items-center justify-between">
+                  <span className="text-sm text-muted-foreground font-mono">Connection</span>
+                  <span className={cn(
+                    "text-xs font-mono font-bold",
+                    bot.isRunning ? "text-primary" : "text-destructive/80"
+                  )}>
+                    {bot.isRunning ? "ONLINE" : "OFFLINE"}
+                  </span>
+                </div>
+                <div className="flex items-center justify-between">
+                  <span className="text-sm text-muted-foreground font-mono">Bot ID</span>
+                  <span className="text-xs font-mono text-white">#{bot.id}</span>
+                </div>
+                <div className="pt-2">
+                  <div className="flex items-center justify-between">
+                    <Label className="text-sm font-medium text-white">Instance Active</Label>
+                    <Switch
+                      checked={form.watch("isRunning")}
+                      onCheckedChange={(v) => form.setValue("isRunning", v)}
+                    />
+                  </div>
+                  <p className="text-xs text-muted-foreground mt-2">Toggle to start or stop this bot</p>
+                </div>
+              </div>
+            </Section>
+
+            <Section title="Commands">
+              <div className="space-y-1.5 font-mono text-xs text-muted-foreground">
+                {[
+                  ['.help', 'Show commands'],
+                  ['.ping', 'Check latency'],
+                  ['.rpc', 'Update status'],
+                  ['.spam', 'Spam messages'],
+                  ['.massdm', 'DM all users'],
+                  ['.gc allow/deny', 'GC settings'],
+                  ['.nitro on/off', 'Nitro sniper'],
+                  ['.snipe', 'Snipe deleted msgs'],
+                ].map(([cmd, desc]) => (
+                  <div key={cmd} className="flex justify-between items-center py-1.5 border-b border-white/5 last:border-0">
+                    <span className="text-primary">{cmd}</span>
+                    <span>{desc}</span>
+                  </div>
+                ))}
+              </div>
+            </Section>
+          </div>
         </div>
-      </div>
+      </main>
     </div>
   );
 }

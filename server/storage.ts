@@ -1,19 +1,74 @@
 import { db } from "./db";
-import { botConfigs, type BotConfig, type InsertBotConfig, type UpdateBotConfig } from "@shared/schema";
-import { eq } from "drizzle-orm";
+import { botConfigs, users, type BotConfig, type InsertBotConfig, type UpdateBotConfig, type User, type InsertUser } from "@shared/schema";
+import { eq, and } from "drizzle-orm";
+import crypto from "crypto";
+
+async function hashPassword(password: string): Promise<string> {
+  return new Promise((resolve, reject) => {
+    const salt = crypto.randomBytes(16).toString("hex");
+    crypto.scrypt(password, salt, 64, (err, derivedKey) => {
+      if (err) reject(err);
+      resolve(`${salt}:${derivedKey.toString("hex")}`);
+    });
+  });
+}
+
+async function verifyPassword(password: string, hash: string): Promise<boolean> {
+  return new Promise((resolve, reject) => {
+    const [salt, key] = hash.split(":");
+    crypto.scrypt(password, salt, 64, (err, derivedKey) => {
+      if (err) reject(err);
+      resolve(key === derivedKey.toString("hex"));
+    });
+  });
+}
 
 export interface IStorage {
+  // Users
+  getUser(id: number): Promise<User | undefined>;
+  getUserByUsername(username: string): Promise<User | undefined>;
+  createUser(user: InsertUser): Promise<User>;
+  verifyUserPassword(username: string, password: string): Promise<User | null>;
+
   // Bot Configs
-  getBots(): Promise<BotConfig[]>;
+  getBots(userId: number): Promise<BotConfig[]>;
+  getAllBots(): Promise<BotConfig[]>;
   getBot(id: number): Promise<BotConfig | undefined>;
   getBotByToken(token: string): Promise<BotConfig | undefined>;
-  createBot(bot: InsertBotConfig): Promise<BotConfig>;
+  createBot(bot: InsertBotConfig, userId: number): Promise<BotConfig>;
   updateBot(id: number, updates: UpdateBotConfig): Promise<BotConfig>;
   deleteBot(id: number): Promise<void>;
 }
 
 export class DatabaseStorage implements IStorage {
-  async getBots(): Promise<BotConfig[]> {
+  async getUser(id: number): Promise<User | undefined> {
+    const [user] = await db.select().from(users).where(eq(users.id, id));
+    return user;
+  }
+
+  async getUserByUsername(username: string): Promise<User | undefined> {
+    const [user] = await db.select().from(users).where(eq(users.username, username));
+    return user;
+  }
+
+  async createUser(user: InsertUser): Promise<User> {
+    const hashed = await hashPassword(user.password);
+    const [newUser] = await db.insert(users).values({ ...user, password: hashed }).returning();
+    return newUser;
+  }
+
+  async verifyUserPassword(username: string, password: string): Promise<User | null> {
+    const user = await this.getUserByUsername(username);
+    if (!user) return null;
+    const valid = await verifyPassword(password, user.password);
+    return valid ? user : null;
+  }
+
+  async getBots(userId: number): Promise<BotConfig[]> {
+    return await db.select().from(botConfigs).where(eq(botConfigs.userId, userId));
+  }
+
+  async getAllBots(): Promise<BotConfig[]> {
     return await db.select().from(botConfigs);
   }
 
@@ -27,9 +82,10 @@ export class DatabaseStorage implements IStorage {
     return bot;
   }
 
-  async createBot(bot: InsertBotConfig): Promise<BotConfig> {
+  async createBot(bot: InsertBotConfig, userId: number): Promise<BotConfig> {
     const [newBot] = await db.insert(botConfigs).values({
       ...bot,
+      userId,
       passcode: bot.passcode || ""
     }).returning();
     return newBot;

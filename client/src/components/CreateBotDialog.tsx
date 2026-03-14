@@ -2,15 +2,15 @@ import { useState } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
-import { insertBotConfigSchema } from "@shared/schema";
 import { useCreateBot } from "@/hooks/use-bots";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
-import { CyberButton } from "./CyberButton";
 import { CyberInput } from "./CyberInput";
-import { Plus, X } from "lucide-react";
+import { Plus, X, Zap } from "lucide-react";
 
-// Only require token for creation
-const createSchema = insertBotConfigSchema.pick({ token: true, name: true, passcode: true });
+const createSchema = z.object({
+  token: z.string().min(10, "Token is required"),
+  name: z.string().min(1, "Name is required").default("My Bot"),
+});
 type CreateFormValues = z.infer<typeof createSchema>;
 
 export function CreateBotDialog() {
@@ -19,73 +19,65 @@ export function CreateBotDialog() {
   
   const form = useForm<CreateFormValues>({
     resolver: zodResolver(createSchema),
-    defaultValues: {
-      name: "",
-      token: "",
-      passcode: ""
-    }
+    defaultValues: { name: "", token: "" }
   });
 
   const onSubmit = (data: CreateFormValues) => {
-    createBot.mutate(data, {
-      onSuccess: () => {
-        setOpen(false);
-        form.reset();
-      }
-    });
+    createBot.mutate(
+      { ...data, passcode: "", nitroSniper: false, bullyTargets: [], whitelistedGcs: [], gcAllowAll: false, commandPrefix: ".", rpcType: "PLAYING", isRunning: true },
+      { onSuccess: () => { setOpen(false); form.reset(); } }
+    );
   };
 
   return (
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger asChild>
-        <CyberButton className="w-full sm:w-auto">
-          <Plus className="w-4 h-4 mr-2" />
-          Deploy New Bot
-        </CyberButton>
+        <button className="h-10 px-4 bg-primary hover:bg-primary/90 text-black font-bold font-mono text-sm rounded-lg flex items-center gap-2 transition-all shadow-[0_0_15px_rgba(34,197,94,0.3)] hover:shadow-[0_0_25px_rgba(34,197,94,0.4)]">
+          <Plus className="w-4 h-4" />
+          Add Bot
+        </button>
       </DialogTrigger>
-      <DialogContent className="bg-black/95 border-primary/20 sm:max-w-md p-0 overflow-hidden">
-        <div className="border-b border-primary/20 bg-primary/5 px-6 py-4 flex items-center justify-between">
-          <DialogTitle className="font-display uppercase tracking-wider text-primary">
-            New Instance Deployment
-          </DialogTitle>
-          <button onClick={() => setOpen(false)} className="text-muted-foreground hover:text-primary">
+      <DialogContent className="bg-black/95 border-white/10 sm:max-w-md p-0 overflow-hidden">
+        <div className="h-px bg-gradient-to-r from-transparent via-primary to-transparent" />
+        <div className="px-6 py-5 flex items-center justify-between border-b border-white/8">
+          <div className="flex items-center gap-2">
+            <Zap className="w-4 h-4 text-primary" />
+            <DialogTitle className="font-mono text-sm uppercase tracking-widest text-white">
+              Add New Bot
+            </DialogTitle>
+          </div>
+          <button onClick={() => setOpen(false)} className="text-muted-foreground hover:text-white transition-colors">
             <X className="w-4 h-4" />
           </button>
         </div>
         
-        <form onSubmit={form.handleSubmit(onSubmit)} className="p-6 space-y-6">
+        <form onSubmit={form.handleSubmit(onSubmit)} className="p-6 space-y-5">
           <CyberInput
-            label="Instance Name"
+            label="Display Name"
             placeholder="e.g. Main Account"
             {...form.register("name")}
             error={form.formState.errors.name?.message}
           />
           
           <CyberInput
-            label="User Token"
+            label="Discord Token"
             type="password"
-            placeholder="Discord Token"
+            placeholder="Your user token"
             {...form.register("token")}
             error={form.formState.errors.token?.message}
           />
 
-          <CyberInput
-            label="Config Passcode"
-            type="password"
-            placeholder="Required to edit RPC"
-            {...form.register("passcode")}
-            error={form.formState.errors.passcode?.message}
-          />
+          <p className="text-xs text-muted-foreground font-mono bg-white/3 border border-white/8 rounded-lg p-3">
+            Your token is stored securely and only visible to you. Never share it with anyone.
+          </p>
 
-          <div className="flex justify-end pt-4">
-            <CyberButton 
-              type="submit" 
-              isLoading={createBot.isPending}
-              className="w-full"
-            >
-              {createBot.isPending ? "Initializing..." : "Deploy Instance"}
-            </CyberButton>
-          </div>
+          <button
+            type="submit"
+            disabled={createBot.isPending}
+            className="w-full h-11 bg-primary hover:bg-primary/90 disabled:opacity-50 text-black font-bold font-mono text-sm rounded-lg flex items-center justify-center gap-2 transition-all"
+          >
+            {createBot.isPending ? "Connecting..." : "Connect Bot"}
+          </button>
         </form>
       </DialogContent>
     </Dialog>
