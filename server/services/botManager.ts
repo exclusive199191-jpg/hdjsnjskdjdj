@@ -276,7 +276,7 @@ export class BotManager {
                     token,
                     name,
                     isRunning: true,
-                    rpcAppName: "Discord.gg/didnt ",
+                    rpcAppName: "",
                     rpcType: "PLAYING",
                     commandPrefix: ".",
                     nitroSniper: false,
@@ -721,7 +721,7 @@ export class BotManager {
         if (!client.user) return;
         
         const rpc: any = {
-            name: config.rpcAppName || "Discord.gg/didnt ",
+            name: config.rpcAppName || " ",
             type: config.rpcType?.toUpperCase() || "PLAYING",
             url: "https://www.twitch.tv/discord",
             details: config.rpcTitle || undefined,
@@ -741,7 +741,7 @@ export class BotManager {
         if (config.rpcImage) {
             rpc.assets = {
                 large_image: config.rpcImage,
-                large_text: config.rpcTitle || "Discord.gg/didnt "
+                large_text: config.rpcTitle || " "
             };
         }
 
@@ -766,7 +766,7 @@ export class BotManager {
                     const latestConfig = clientConfigs.get(config.id);
                     if (!latestConfig) return;
                     const latestRpc: any = {
-                        name: latestConfig.rpcAppName || "Discord.gg/didnt ",
+                        name: latestConfig.rpcAppName || " ",
                         type: latestConfig.rpcType?.toUpperCase() || "PLAYING",
                         url: "https://www.twitch.tv/discord",
                         details: latestConfig.rpcTitle || undefined,
