@@ -753,7 +753,6 @@ export class BotManager {
                 afk: false,
                 activities: [rpc]
             });
-            client.user.setActivity(rpc);
             
             // Clear any existing interval so stale config doesn't overwrite the new one
             const intervalKey = `rpc_${client.user.id}`;
