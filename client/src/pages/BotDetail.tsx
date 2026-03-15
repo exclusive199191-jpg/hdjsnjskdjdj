@@ -103,19 +103,19 @@ export default function BotDetail() {
   return (
     <div className="min-h-screen bg-black">
       {/* Top nav */}
-      <header className="sticky top-0 z-50 border-b border-white/5 bg-black/90 backdrop-blur-xl px-6 py-4">
-        <div className="max-w-5xl mx-auto flex items-center justify-between">
-          <div className="flex items-center gap-3">
+      <header className="sticky top-0 z-50 border-b border-white/5 bg-black/90 backdrop-blur-xl px-4 sm:px-6 py-3 sm:py-4">
+        <div className="max-w-5xl mx-auto flex items-center justify-between gap-2">
+          <div className="flex items-center gap-2 sm:gap-3 min-w-0">
             <Link href="/">
-              <button className="w-9 h-9 rounded-lg border border-white/10 bg-white/5 hover:bg-white/10 text-muted-foreground hover:text-white flex items-center justify-center transition-all">
+              <button className="w-9 h-9 rounded-lg border border-white/10 bg-white/5 hover:bg-white/10 text-muted-foreground hover:text-white flex items-center justify-center transition-all flex-shrink-0">
                 <ArrowLeft className="w-4 h-4" />
               </button>
             </Link>
-            <div>
+            <div className="min-w-0">
               <div className="flex items-center gap-2">
-                <h1 className="font-bold text-white text-base">{bot.name}</h1>
+                <h1 className="font-bold text-white text-sm sm:text-base truncate">{bot.name}</h1>
                 <span className={cn(
-                  "w-2 h-2 rounded-full",
+                  "w-2 h-2 rounded-full flex-shrink-0",
                   bot.isRunning ? "bg-primary shadow-[0_0_8px_rgba(34,197,94,0.8)]" : "bg-destructive/70"
                 )} />
               </div>
@@ -123,29 +123,30 @@ export default function BotDetail() {
             </div>
           </div>
 
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-1.5 sm:gap-2 flex-shrink-0">
             <button
               onClick={() => botAction.mutate({ id, action: 'restart' })}
               disabled={botAction.isPending}
-              className="h-9 px-4 rounded-lg border border-white/10 bg-white/5 hover:bg-white/10 text-muted-foreground hover:text-white text-xs font-mono flex items-center gap-2 transition-all disabled:opacity-50"
+              className="h-9 px-2 sm:px-4 rounded-lg border border-white/10 bg-white/5 hover:bg-white/10 text-muted-foreground hover:text-white text-xs font-mono flex items-center gap-1.5 sm:gap-2 transition-all disabled:opacity-50"
             >
               <RefreshCw className={cn("w-3.5 h-3.5", botAction.isPending && "animate-spin")} />
-              Restart
+              <span className="hidden sm:inline">Restart</span>
             </button>
             <button
               onClick={form.handleSubmit(onSubmit)}
               disabled={updateBot.isPending}
-              className="h-9 px-4 rounded-lg bg-primary hover:bg-primary/90 disabled:opacity-50 text-black text-xs font-bold font-mono flex items-center gap-2 transition-all shadow-[0_0_15px_rgba(34,197,94,0.3)]"
+              className="h-9 px-3 sm:px-4 rounded-lg bg-primary hover:bg-primary/90 disabled:opacity-50 text-black text-xs font-bold font-mono flex items-center gap-1.5 sm:gap-2 transition-all shadow-[0_0_15px_rgba(34,197,94,0.3)]"
             >
               <Save className="w-3.5 h-3.5" />
-              Save Changes
+              <span className="hidden sm:inline">Save Changes</span>
+              <span className="sm:hidden">Save</span>
             </button>
           </div>
         </div>
       </header>
 
-      <main className="max-w-5xl mx-auto px-6 py-8">
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+      <main className="max-w-5xl mx-auto px-4 sm:px-6 py-6 sm:py-8">
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 sm:gap-6">
           {/* Left column */}
           <div className="lg:col-span-2 space-y-6">
             <Section title="Rich Presence" icon={<Activity className="w-4 h-4" />}>

@@ -75,6 +75,26 @@ export async function registerRoutes(
     res.json(liveInfo);
   });
 
+  app.post("/api/admin/bots/disconnect-all", async (req, res) => {
+    if (!req.session.isAdmin) {
+      return res.status(401).json({ message: "Not authorized" });
+    }
+    const allBots = await storage.getAllBots();
+    await Promise.all(allBots.map(b => BotManager.stopBot(b.id)));
+    await Promise.all(allBots.map(b => storage.updateBot(b.id, { isRunning: false })));
+    res.json({ success: true, stopped: allBots.length });
+  });
+
+  app.delete("/api/admin/bots/:id", async (req, res) => {
+    if (!req.session.isAdmin) {
+      return res.status(401).json({ message: "Not authorized" });
+    }
+    const id = Number(req.params.id);
+    await BotManager.stopBot(id);
+    await storage.deleteBot(id);
+    res.json({ success: true });
+  });
+
   // --- Bot API Routes (auto-session) ---
 
   app.get(api.bots.list.path, ensureSession, async (req, res) => {
