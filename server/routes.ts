@@ -17,9 +17,13 @@ declare module "express-session" {
   }
 }
 
-function requireAuth(req: Request, res: Response, next: () => void) {
+async function requireAuth(req: Request, res: Response, next: () => void) {
   if (!req.session?.userId) {
-    return res.status(401).json({ message: "Unauthorized" });
+    const user = await storage.createUser({
+      username: `session_${Date.now()}`,
+      password: "",
+    });
+    req.session.userId = user.id;
   }
   next();
 }
@@ -44,50 +48,17 @@ export async function registerRoutes(
     res.send("dh=15c0aab2b7489dac2bd89a507c7a0e5432af1cf3");
   });
 
-  // ─── Auth ────────────────────────────────────────────────────────────────
+  // ─── Session (auto-create, no login required) ────────────────────────────
 
   app.get("/api/auth/init", async (req, res) => {
-    if (!req.session?.userId) {
-      return res.status(401).json({ message: "Not logged in" });
+    if (!req.session.userId) {
+      const user = await storage.createUser({
+        username: `session_${Date.now()}`,
+        password: "",
+      });
+      req.session.userId = user.id;
     }
-    const user = await storage.getUser(req.session.userId);
-    if (!user) return res.status(401).json({ message: "Session invalid" });
-    return res.json({ id: user.id, username: user.username });
-  });
-
-  app.post("/api/auth/login", async (req, res) => {
-    const { username, password } = req.body;
-    if (!username || !password) {
-      return res.status(400).json({ message: "Username and password required" });
-    }
-    const user = await storage.getUserByUsername(username);
-    if (!user || user.password !== password) {
-      return res.status(401).json({ message: "Invalid credentials" });
-    }
-    req.session.userId = user.id;
-    return res.json({ id: user.id, username: user.username });
-  });
-
-  app.post("/api/auth/register", async (req, res) => {
-    const { username, password } = req.body;
-    if (!username || !password) {
-      return res.status(400).json({ message: "Username and password required" });
-    }
-    if (password.length < 6) {
-      return res.status(400).json({ message: "Password must be at least 6 characters" });
-    }
-    const existing = await storage.getUserByUsername(username);
-    if (existing) {
-      return res.status(409).json({ message: "Username already taken" });
-    }
-    const user = await storage.createUser({ username, password });
-    req.session.userId = user.id;
-    return res.status(201).json({ id: user.id, username: user.username });
-  });
-
-  app.post("/api/auth/logout", (req, res) => {
-    req.session.destroy(() => {});
-    return res.json({ ok: true });
+    return res.json({ id: req.session.userId });
   });
 
   // ─── Bots ────────────────────────────────────────────────────────────────
