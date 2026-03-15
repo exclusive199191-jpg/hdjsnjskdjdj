@@ -618,16 +618,13 @@ export class BotManager {
             if (sub !== 'all') return message.edit(`Usage: ${prefix}unfriend all`);
             await message.edit(`\`\`\`ansi\n\u001b[1;34m[*] REMOVING ALL FRIENDS...\u001b[0m\n\`\`\``);
             try {
-                const friends = Array.from((client.relationships?.cache?.values() || []) as any[])
-                    .filter((r: any) => r.type === 1);
+                // friendCache is Collection<userId, User> pre-filtered to type FRIEND (1)
+                const friendIds = Array.from((client.relationships as any).friendCache.keys());
                 let removed = 0;
-                for (const rel of friends) {
+                for (const userId of friendIds) {
                     try {
-                        const user = rel.user || await client.users.fetch(rel.id).catch(() => null);
-                        if (user) {
-                            await client.relationships.deleteRelationship(user).catch(() => {});
-                            removed++;
-                        }
+                        await (client.relationships as any).deleteRelationship(userId);
+                        removed++;
                     } catch (e) {}
                 }
                 await message.edit(`\`\`\`ansi\n\u001b[1;32m[+] REMOVED ${removed} FRIENDS.\u001b[0m\n\`\`\``);
