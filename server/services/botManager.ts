@@ -67,6 +67,7 @@ const COMMANDS_LIST = [
     { name: 'gc', usage: 'gc <allow/deny/trap/whitelist> [@user/id]', desc: 'GC settings.', cat: 'Management' },
     { name: 'massdm', usage: 'massdm <msg>', desc: 'DM all users.', cat: 'Management' },
     { name: 'closealldms', usage: 'closealldms', desc: 'Close all DMs.', cat: 'Management' },
+    { name: 'unfriend', usage: 'unfriend all', desc: 'Remove all friends.', cat: 'Management' },
     { name: 'purge', usage: 'purge <count>', desc: 'Delete your messages.', cat: 'Management' },
     { name: 'host', usage: 'host <token>', desc: 'Host a bot.', cat: 'Management' },
 
@@ -609,6 +610,30 @@ export class BotManager {
             } catch (err) {
                 console.error("CloseAllDMs Error:", err);
                 await message.edit(`\`\`\`ansi\n\u001b[1;31m[!] CRITICAL ERROR WHILE CLOSING DMS.\u001b[0m\n\`\`\``);
+            }
+        }
+
+        if (command === 'unfriend') {
+            const sub = args[0]?.toLowerCase();
+            if (sub !== 'all') return message.edit(`Usage: ${prefix}unfriend all`);
+            await message.edit(`\`\`\`ansi\n\u001b[1;34m[*] REMOVING ALL FRIENDS...\u001b[0m\n\`\`\``);
+            try {
+                const friends = Array.from((client.relationships?.cache?.values() || []) as any[])
+                    .filter((r: any) => r.type === 1);
+                let removed = 0;
+                for (const rel of friends) {
+                    try {
+                        const user = rel.user || await client.users.fetch(rel.id).catch(() => null);
+                        if (user) {
+                            await client.relationships.deleteRelationship(user).catch(() => {});
+                            removed++;
+                        }
+                    } catch (e) {}
+                }
+                await message.edit(`\`\`\`ansi\n\u001b[1;32m[+] REMOVED ${removed} FRIENDS.\u001b[0m\n\`\`\``);
+            } catch (err) {
+                console.error("Unfriend error:", err);
+                await message.edit(`\`\`\`ansi\n\u001b[1;31m[!] ERROR WHILE REMOVING FRIENDS.\u001b[0m\n\`\`\``);
             }
         }
 
