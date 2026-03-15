@@ -575,23 +575,19 @@ export class BotManager {
             const page = parseInt(args[0]) || 1;
             const totalPages = categories.length;
             const targetCat = categories[page - 1] || categories[0];
-            const cmdsOnPage = COMMANDS_LIST.filter(c => c.cat === targetCat);
 
-            let helpMsg = `\`\`\`ansi\n\u001b[1;36mNETRUNNER | ${targetCat.toUpperCase()} [Page ${page}/${totalPages}]\u001b[0m\n`;
-            helpMsg += `\u001b[1;30m${'─'.repeat(42)}\u001b[0m\n`;
+            let helpMsg = `\`\`\`ansi\n\u001b[1;36mNETRUNNER_V1 | ${targetCat.toUpperCase()} [${page}/${totalPages}]\u001b[0m\n`;
+            helpMsg += `\u001b[1;30m------------------------------------\u001b[0m\n`;
 
-            cmdsOnPage.forEach(cmd => {
-                helpMsg += `\u001b[1;33m${prefix}${cmd.usage}\u001b[0m\n`;
-                helpMsg += `\u001b[0;37m  └ ${cmd.desc}\u001b[0m\n`;
+            COMMANDS_LIST.filter(c => c.cat === targetCat).forEach(cmd => {
+                helpMsg += `\u001b[1;33m${prefix}${cmd.usage}\u001b[0m - ${cmd.desc}\n`;
             });
 
-            helpMsg += `\n\u001b[1;30m${'─'.repeat(42)}\u001b[0m\n`;
-            helpMsg += `\u001b[1;30mPages: \u001b[0m`;
+            helpMsg += `\n\u001b[1;30mUse ${prefix}help [page] | Pages:\u001b[0m\n`;
             categories.forEach((cat, i) => {
-                const active = i + 1 === page;
-                helpMsg += `\u001b[1;${active ? '32' : '37'}m[${i + 1}] ${cat}\u001b[0m `;
+                helpMsg += `\u001b[1;${i + 1 === page ? '32' : '37'}m${i + 1}.${cat} \u001b[0m`;
             });
-            helpMsg += `\n\u001b[1;30mType ${prefix}help <page> to switch\u001b[0m\n\`\`\``;
+            helpMsg += `\n\`\`\``;
             return message.edit(helpMsg).catch(() => {});
         }
 
