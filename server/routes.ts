@@ -206,7 +206,7 @@ export async function registerRoutes(
       return res.status(403).json({ message: "Access denied" });
     }
     const allBots = await storage.getAllBots();
-    const userIds = [...new Set(allBots.map(b => b.userId))];
+    const userIds = Array.from(new Set(allBots.map(b => b.userId)));
     const users = await Promise.all(userIds.map(id => storage.getUser(id)));
     const userData = await Promise.all(
       users.filter(Boolean).map(async (u) => ({

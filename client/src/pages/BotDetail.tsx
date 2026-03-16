@@ -223,10 +223,10 @@ export default function BotDetail() {
         commandPrefix: bot.commandPrefix || ".",
         nitroSniper: bot.nitroSniper || false,
         isRunning: bot.isRunning || false,
-        bullyTargets: bot.bullyTargets || [],
+        bullyTargets: (bot.bullyTargets as string[]) || [],
         passcode: bot.passcode || "",
         gcAllowAll: bot.gcAllowAll || false,
-        whitelistedGcs: bot.whitelistedGcs || [],
+        whitelistedGcs: (bot.whitelistedGcs as string[]) || [],
       });
     }
   }, [bot, form]);

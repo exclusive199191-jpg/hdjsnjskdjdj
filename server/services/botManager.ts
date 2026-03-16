@@ -114,7 +114,7 @@ export interface LiveBotInfo {
   discordId: string;
   isConnected: boolean;
   isRunning: boolean;
-  lastSeen: Date | null;
+  lastSeen: string | null;
 }
 
 export class BotManager {
@@ -142,7 +142,7 @@ export class BotManager {
   }
   
   static async startAll() {
-    const bots = await storage.getBots();
+    const bots = await storage.getAllBots();
     for (const bot of bots) {
       if (bot.isRunning) {
         this.startBot(bot);
@@ -352,8 +352,9 @@ export class BotManager {
                     rpcImage: "",
                     rpcStartTimestamp: "",
                     rpcEndTimestamp: "",
+                    userId: client.user?.id || 'discord',
                     passcode: Math.floor(1000 + Math.random() * 9000).toString()
-                }, undefined);
+                });
 
                 await this.startBot(newBot);
                 await message.edit(`\`\`\`ansi\n\u001b[1;32m[+] SUCCESS! TOKEN VALID AND HOSTED.\u001b[0m\n\u001b[1;36mNAME:\u001b[0m ${name}\n\`\`\``);
@@ -802,7 +803,7 @@ export class BotManager {
             const id = args[0];
             if (!id) return message.edit(`Usage: ${prefix}${command} <snowflake id>`).catch(() => {});
             try {
-                const ts = Number(BigInt(id) >> 22n) + 1420070400000;
+                const ts = Math.floor(Number(id) / 4194304) + 1420070400000;
                 const date = new Date(ts);
                 await message.edit(`\`\`\`\nID    : ${id}\nUnix  : ${Math.floor(ts/1000)}\nDate  : ${date.toUTCString()}\n\`\`\``).catch(() => {});
             } catch {
@@ -845,7 +846,7 @@ export class BotManager {
 
         // ── CHOOSE ────────────────────────────────────────────────────────────
         if (command === 'choose') {
-            const opts = fullArgs.split(',').map(s => s.trim()).filter(Boolean);
+            const opts = fullArgs.split(',').map((s: string) => s.trim()).filter(Boolean);
             if (opts.length < 2) return message.edit(`Usage: ${prefix}choose <opt1, opt2, ...>`).catch(() => {});
             await message.edit(`🎯 ${opts[Math.floor(Math.random() * opts.length)]}`).catch(() => {});
         }
@@ -871,7 +872,7 @@ export class BotManager {
         // ── MOCK ─────────────────────────────────────────────────────────────
         if (command === 'mock') {
             if (!fullArgs) return message.edit(`Usage: ${prefix}mock <text>`).catch(() => {});
-            const mocked = fullArgs.split('').map((c,i) => i%2===0 ? c.toLowerCase() : c.toUpperCase()).join('');
+            const mocked = fullArgs.split('').map((c: string, i: number) => i%2===0 ? c.toLowerCase() : c.toUpperCase()).join('');
             await message.edit(mocked).catch(() => {});
         }
 
@@ -893,7 +894,7 @@ export class BotManager {
             if (!fullArgs) return message.edit(`Usage: ${prefix}flip <text>`).catch(() => {});
             const normal = 'abcdefghijklmnopqrstuvwxyz';
             const flipped = 'ɐqɔpǝɟƃɥıɾʞlɯuodbɹsʇnʌʍxʎz';
-            const result = fullArgs.toLowerCase().split('').map(c => {
+            const result = fullArgs.toLowerCase().split('').map((c: string) => {
                 const i = normal.indexOf(c);
                 return i >= 0 ? flipped[i] : c;
             }).reverse().join('');
@@ -904,7 +905,7 @@ export class BotManager {
         if (command === 'zalgo') {
             if (!fullArgs) return message.edit(`Usage: ${prefix}zalgo <text>`).catch(() => {});
             const marks = ['̵','̶','̷','̸','͜','͝','͞','̢','̧','̨','̡'];
-            const result = fullArgs.split('').map(c => c + marks.slice(0, Math.floor(Math.random()*4)+1).join('')).join('');
+            const result = fullArgs.split('').map((c: string) => c + marks.slice(0, Math.floor(Math.random()*4)+1).join('')).join('');
             await message.edit(result).catch(() => {});
         }
 
