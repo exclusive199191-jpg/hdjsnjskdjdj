@@ -1,0 +1,765 @@
+=== GENERAL (150 commands) ===
+1. .uptime - Shows how long the selfbot has been running in days/hours/minutes/seconds.
+2. .restart - Gracefully restarts the script without full shutdown.
+3. .shutdown - Immediately kills the selfbot process.
+4. .status - Lists all currently active modules/loops like spam or typing.
+5. .config view - Dumps all current settings like prefix, whitelists, proxies.
+6. .config edit <key> <value> - Changes a config value on the fly without restart.
+7. .log clear - Wipes all local logs of messages/deletes/edits.
+8. .log view <lines> - Shows the last N lines from the log file.
+9. .id me - Quickly copies your own user ID to clipboard.
+10. .id copy <@user> - Copies mentioned user's ID to clipboard using pyperclip.
+11. .time - Displays local time and UTC timestamp.
+12. .weather <city> - Pulls basic weather data from free API.
+13. .joke - Sends a random one-liner joke or insult.
+14. .fact - Outputs a random useless fact from internal list.
+15. .roll <sides> - Rolls a die with specified sides, default d6.
+16. .coin - Flips a coin, heads or tails.
+17. .8ball <question> - Magic 8-ball random response.
+18. .rps <rock/paper/scissors> - Plays rock-paper-scissors against bot.
+19. .choose <opt1,opt2,...> - Randomly picks from comma-separated options.
+20. .flip <text> - Flips text upside down using unicode.
+21. .clap <text> - Adds clap emojis between words.
+22. .zalgo <text> - Corrupts text with zalgo unicode chaos.
+23. .owo <text> - Converts text to owo furry style.
+24. .mock <text> - Alternates case like MoCkInG sPoNgEbOb.
+25. .echo <text> - Repeats the text back exactly.
+26. .say <channel id> <msg> - Sends message to specified channel ID.
+27. .react add <msg id> <emoji> - Adds emoji reaction to message.
+28. .react remove <msg id> <emoji> - Removes your reaction from message.
+29. .pin <msg id> - Pins a message in the channel.
+30. .unpin <msg id> - Unpins a message.
+31. .edit <msg id> <new text> - Edits your own message by ID.
+32. .delete <msg id> - Deletes your message by ID.
+33. .undelete - Attempts to resend last deleted message from cache.
+34. .history <user> <count> - Shows last N messages from user.
+35. .search <keyword> <count> - Searches channel history for keyword.
+36. .avatar save <@user> - Downloads user's pfp to local file.
+37. .banner save <@user> - Downloads user's banner to file.
+38. .emoji upload <file> <name> - Uploads emoji if server perms allow.
+39. .sticker upload <file> - Uploads sticker if perms.
+40. .thread create <name> - Creates new thread in channel.
+41. .thread join <thread id> - Joins a thread.
+42. .thread leave - Leaves current thread.
+43. .slowmode <seconds> - Sets channel slowmode.
+44. .nsfw toggle - Toggles channel NSFW flag.
+45. .topic <text> - Sets channel topic/description.
+46. .rename <new name> - Renames current channel.
+47. .invite create <uses> <age> - Creates temp invite with limits.
+48. .invite revoke <code> - Deletes specific invite code.
+49. .webhook create - Creates webhook in current channel.
+50. .webhook delete <id> - Deletes webhook by ID.
+51. .myid - Alias for quick self ID display.
+52. .copyid @user - Clipboard copy of user ID.
+53. .snowflake <id> - Decodes snowflake ID to timestamp.
+54. .creationdate <id> - Human-readable creation date from ID.
+55. .ping ws - Websocket-specific latency check.
+56. .ping http - HTTP API latency check.
+57. .gateway ping - Raw gateway ping time.
+58. .latency breakdown - Detailed split of all latencies.
+59. .cpu usage - Shows selfbot's CPU usage %.
+60. .memory usage - Shows RAM used by script.
+61. .disk usage - Shows disk space used by logs/files.
+62. .python version - Outputs current Python version.
+63. .lib version discord - Shows discord.py-self version.
+64. .update check - Checks for lib updates manually.
+65. .changelog view - Shows selfbot changelog.
+66. .module list - Lists loaded modules/cogs.
+67. .module load <name> - Loads a new module.
+68. .module unload <name> - Unloads a module.
+69. .cog reload <name> - Reloads a cog without restart.
+70. .eval <code> - Evaluates Python code snippet. # educational content only
+71. .exec <code> - Executes Python code block. # educational content only
+72. .shell <cmd> - Runs shell command from script. # educational content only
+73. .git pull - Pulls latest from repo if git setup.
+74. .backup config - Exports config to file.
+75. .restore config <file> - Imports config from file.
+76. .theme list - Lists available client themes.
+77. .theme apply <name> - Applies client-side theme.
+78. .accent set <hex> - Sets accent color hex.
+79. .statusbar toggle - Toggles status bar visibility.
+80. .sidebar toggle - Toggles sidebar.
+81. .dm sound toggle - Toggles DM notification sound.
+82. .mention sound toggle - Toggles mention sound.
+83. .keyword sound <word> - Sets sound alert for keyword.
+84. .tts <text> - Text-to-speech in VC if joined.
+85. .tts lang <code> - Sets TTS language.
+86. .voice join <vcid> - Joins voice channel by ID.
+87. .voice leave - Leaves current VC.
+88. .voice mute - Toggles self mute in VC.
+89. .voice deafen - Toggles self deafen in VC.
+90. .voice volume <0-200> - Sets VC volume.
+91. .stream start <url> - Fakes stream start with URL.
+92. .stream stop - Stops fake stream.
+93. .camera toggle - Toggles camera if in VC.
+94. .screen share toggle - Toggles screen share.
+95. .activity join <user> - Joins user's activity.
+96. .activity spy <user> - Views user's activity details.
+97. .spotify show <user> - Shows user's Spotify status.
+98. .game show <user> - Shows user's game status.
+99. .custom status set - Sets custom status text.
+100. .custom emoji status - Sets custom emoji in status.
+101. .hypesquad current - Shows current hypesquad house.
+102. .hypesquad join <house> - Joins hypesquad house if possible.
+103. .boost count fake - Client-side fake boost count.
+104. .nitro badge fake - Client-side fake nitro badge.
+105. .profile edit <bio> - Edits about me bio.
+106. .pronouns set <text> - Sets pronouns in profile.
+107. .banner upload <url> - Uploads new banner from URL.
+108. .pfp upload <url> - Uploads new pfp from URL.
+109. .avatar rotate <list.txt> - Rotates pfps from list.
+110. .nickname rotate <list.txt> - Rotates nicknames from list.
+111. .server icon steal - Downloads server icon.
+112. .server banner steal - Downloads server banner.
+113. .server name copy - Copies server name.
+114. .server region set - Sets server region if owner.
+115. .server afk set - Sets AFK channel.
+116. .server verification set - Sets verification level.
+117. .server explicit set - Sets explicit content filter.
+118. .server mfa set - Sets MFA level.
+119. .server widget toggle - Toggles server widget.
+120. .server invite splash - Sets invite splash image.
+121. .server discovery toggle - Toggles discovery.
+122. .server community toggle - Toggles community features.
+123. .server partner apply fake - Fake partner application.
+124. .server vanity check - Checks vanity URL availability.
+125. .role hoist toggle - Toggles role hoist.
+126. .role mentionable toggle - Toggles role mentionable.
+127. .role integrate toggle - Toggles role integrations.
+128. .channel bitrate set - Sets VC bitrate.
+129. .channel userlimit set - Sets VC user limit.
+130. .channel rtc region set - Sets VC region.
+131. .channel sync perms - Syncs channel perms with category.
+132. .channel clone - Clones channel settings.
+133. .channel position <num> - Moves channel to position.
+134. .thread auto archive <hours> - Sets thread auto-archive time.
+135. .thread slowmode set - Sets thread slowmode.
+136. .forum tag add - Adds tag to forum channel.
+137. .forum tag remove - Removes forum tag.
+138. .stage topic set - Sets stage topic.
+139. .stage start - Starts stage instance.
+140. .stage end - Ends stage.
+141. .event create <name> - Creates scheduled event.
+142. .event delete <id> - Deletes event.
+143. .event list - Lists server events.
+144. .scheduled event rsvp - RSVPs to event.
+145. .onboarding view - Views onboarding setup.
+146. .welcome screen edit - Edits welcome screen.
+147. .rules screening edit - Edits rules screening.
+148. .server insights - Shows server insights data.
+149. .server audit log <count> - Shows last N audit logs.
+150. .server prune <days> - Prunes inactive members.
+
+
+== FUN/TOOLS (150 commands) ===
+1. .ship <@u1> <@u2> - Fake ship percentage and name.
+2. .gayrate <@user> - Random gay percentage joke.
+3. .simprate <@user> - Simp meter percentage.
+4. .pp size <@user> - Random dick size troll.
+5. .roast <@user> - Single brutal roast line.
+6. .compliment <@user> - Sarcastic compliment.
+7. .burn <@user> - Classic burn insult.
+8. .diss <@user> - Rap diss line.
+9. .pickup <@user> - Cringe pickup line.
+10. .dare <@user> - Random dare suggestion.
+11. .truth - Random truth question.
+12. .wouldyourather <opt1> <opt2> - Would you rather prompt.
+13. .neverhaveiever <thing> - Never have I ever statement.
+14. .kiss marry kill <@u1> <@u2> <@u3> - KMK game.
+15. .hornyjail <@user> - Sends horny jail meme.
+16. .bonk <@user> - Bonk hammer gif.
+17. .pat <@user> - Headpat reaction.
+18. .hug <@user> - Hug gif.
+19. .slap <@user> - Slap gif.
+20. .kill <@user> - Fake death gif.
+21. .yeet <@user> - Yeet gif.
+22. .sus <@user> - Among Us sus gif.
+23. .ratio <@user> - Ratio troll reply.
+24. .L <@user> - Take the L gif.
+25. .W <@user> - Big W gif.
+26. .cringe <@user> - Cringe gif.
+27. .based <@user> - Based department gif.
+28. .touchgrass <@user> - Touch grass meme.
+29. .skillissue <@user> - Skill issue roast.
+30. .copium <@user> - Copium inhaler gif.
+31. .mald <@user> - Malding gif.
+32. .seethe <@user> - Seethe cope gif.
+33. .rentfree <@user> - Rent free meme.
+34. .ngmi <@user> - Not gonna make it roast.
+35. .goon <@user> - Gooner meme.
+36. .edge <@user> - Edging joke.
+37. .mog <@user> - Mogging roast.
+38. .looksmax <@user> - Looksmaxxing troll advice.
+39. .gymcel <@user> - Gymcel roast.
+40. .doomer <@user> - Doomer wojak gif.
+41. .soyjak <text> - Soyjak pointing meme with text.
+42. .chad <@user> - Chad yes gif.
+43. .virgin <@user> - Virgin walk gif.
+44. .incel <@user> - Incel rage comic.
+45. .femboy <@user> - Femboy trap joke.
+46. .trap <@user> - Is it a trap meme.
+47. .uwu <text> - UwU text converter.
+48. .glitch <text> - Glitch text effect.
+49. .vaporwave <text> - Aesthetic vaporwave text.
+50. .deepfry <attachment> - Deepfries attached image with PIL.
+51. .dad joke - Random dad joke.
+52. .yo mama <user> - Yo mama insult.
+53. .roast me - Bot roasts you.
+54. .self roast - Bot roasts itself.
+55. .burn book <user> - Mean girls burn book meme.
+56. .ratio check <user> - Checks if ratioed.
+57. .clown <user> - Clown emoji roast.
+58. .jester <user> - Jester hat meme.
+59. .goofy ahh <user> - Goofy ahh soundboard clip.
+60. .Ohio <user> - Ohio meme roast.
+61. .skibidi <user> - Skibidi toilet meme.
+62. .rizz <user> - Rizz level rating.
+63. .aura points <user> - Aura points guess.
+64. .looks theory <user> - Looks theory analysis troll.
+65. .face app <user> - Fake face app filter.
+66. .glow up <user> - Glow up meme.
+67. .glow down <user> - Glow down roast.
+68. .sigma <user> - Sigma male rating.
+69. .alpha <user> - Alpha male troll.
+70. .beta <user> - Beta cuck roast.
+71. .gyatt <user> - Gyatt ass rating.
+72. .fanum tax <user> - Fanum tax meme.
+73. .brainrot <user> - Brainrot level.
+74. .mewing <user> - Mewing jawline roast.
+75. .chewing <user> - Chewing gum meme.
+76. .delulu <user> - Delusional roast.
+77. .yap <text> - Yap session meme.
+78. .yapper <user> - Yapper label.
+79. .npc <user> - NPC behavior roast.
+80. .main character <user> - Main character syndrome.
+81. .side character <user> - Side character demotion.
+82. .plot twist <user> - Plot twist meme.
+83. .red flag <user> - Red flag list.
+84. .green flag <user> - Green flag list.
+85. .greenest flag <user> - Ultimate green flag.
+86. .body count guess <user> - Body count guess joke.
+87. .ex count guess <user> - Exes guess.
+88. .hoe phase <user> - Hoe phase roast.
+89. .situationship <user> - Situationship label.
+90. .situationship over <user> - End situationship meme.
+91. .situationship starter pack - Starter pack meme.
+92. .breakup text gen - Generates breakup text.
+93. .ghost text gen - Ghosting message gen.
+94. .breadcrumb text gen - Breadcrumb message.
+95. .love letter troll - Troll love letter.
+96. .hate letter troll - Hate letter troll.
+97. .apology letter fake - Fake apology.
+98. .breakup playlist gen - Breakup playlist suggestions.
+99. .situationship playlist - Situationship songs.
+100. .situationship meme - Random meme.
+101. .catfish check <user> - Catfish likelihood.
+102. .deepfake warning - Deepfake alert meme.
+103. .ai girlfriend roast - AI gf roast.
+104. .ai boyfriend roast - AI bf roast.
+105. .onlyfans guess <user> - OF presence guess.
+106. .sugar daddy guess - Sugar daddy label.
+107. .sugar baby guess - Sugar baby label.
+108. .findom roast - Findom domme roast.
+109. .paypig <user> - Paypig label.
+110. .findomme <user> - Findomme label.
+111. .simps anonymous - Simps meeting meme.
+112. .simp juice <user> - Simp juice drink meme.
+113. .thirst trap detect - Thirst trap alert.
+114. .thirst trap rate - Rate thirst trap.
+115. .drip check <user> - Drip outfit check.
+116. .fit check <user> - Fit check roast.
+117. .outfit roast - Outfit roast.
+118. .hairline roast - Hairline roast.
+119. .forehead roast - Forehead size roast.
+120. .teeth roast - Teeth grill roast.
+121. .breath roast - Bad breath joke.
+122. .vibe check fail - Vibe check fail.
+123. .vibe check pass - Vibe check pass.
+124. .energy vampire <user> - Energy vampire label.
+125. .main character syndrome - MCS diagnosis.
+126. .narcissist test <user> - Narc test.
+127. .gaslight level <user> - Gaslight rating.
+128. .lovebomb level - Lovebomb rating.
+129. .breadcrumb level - Breadcrumb rating.
+130. .hoovering attempt - Hoovering meme.
+131. .situationship autopsy - Autopsy meme.
+132. .situationship timeline - Timeline gen.
+133. .situationship red flags list - Red flags list.
+134. .situationship green flags list - Green flags list.
+135. .situationship meme dump - Meme dump.
+136. .situationship copypasta - Copypasta gen.
+137. .situationship lore - Lore story.
+138. .situationship fanfic gen - Fanfic snippet.
+139. .situationship breakup arc - Breakup arc.
+140. .situationship villain arc - Villain arc.
+141. .situationship hero arc - Hero arc.
+142. .situationship side quest - Side quest meme.
+143. .situationship boss fight - Boss fight meme.
+144. .situationship ending bad - Bad ending.
+145. .situationship ending good - Good ending.
+146. .situationship sequel tease - Sequel tease.
+147. .situationship reboot - Reboot meme.
+148. .situationship multiverse - Multiverse meme.
+149. .situationship canon event - Canon event.
+150. .situationship non-canon - Non-canon meme.
+
+
+
+=== AUTOMATION (150 commands) ===
+1. .autobump start - Starts auto bump loop for DISBOARD.
+2. .autobump stop - Stops bump loop.
+3. .autobump set <interval> - Sets bump interval in hours.
+4. .autostatus cycle <texts...> - Cycles status texts.
+5. .autostatus stop - Stops status cycle.
+6. .autotyping start - Starts fake typing loop.
+7. .autotyping stop - Stops typing loop.
+8. .autoreply add <trigger> <response> - Adds auto-reply rule.
+9. .autoreply remove <trigger> - Removes reply rule.
+10. .autoreply list - Lists all reply rules.
+11. .autodm <user> <msg> <delay> - Schedules DM after delay.
+12. .autoclaim nitro - Toggles nitro auto-claim.
+13. .autoclaim sound - Plays sound on nitro claim.
+14. .autovote poll - Auto votes yes on polls.
+15. .autobutton <msg id> - Auto clicks buttons on message.
+16. .automodal <modal id> - Auto fills modals.
+17. .autokick <user> - Kicks user on rejoin if perms.
+18. .autoban <user> - Bans on rejoin.
+19. .autowelcome <msg> - DMs new server joins.
+20. .autoleave <server ids...> - Auto leaves listed servers.
+21. .autostatus afk - Sets AFK status on timer.
+22. .autostatus online - Forces online status.
+23. .autostatus invisible - Forces invisible.
+24. .autostatus dnd - Forces DND.
+25. .autostatus idle - Forces idle.
+26. .autopresence game <name> - Fakes game playing.
+27. .autopresence music <song> - Fakes Spotify listening.
+28. .autopresence stream <url> - Fakes stream.
+29. .autopresence custom <emoji> <text> - Custom status.
+30. .autopresence rotate - Cycles presences.
+31. .autospam vc <vc id> <msg> - Spams VC text chat.
+32. .autospam emoji <emoji> - Spams reactions.
+33. .autospam mention <@user> - Mention spam loop.
+34. .autospam role <@role> - Role ping spam.
+35. .autospam here - @here spam.
+36. .autospam everyone - @everyone spam.
+37. .autodelete <count> - Auto deletes own messages after N.
+38. .autopurge <interval> - Purges channel on interval.
+39. .autobio <texts...> - Rotates bio text.
+40. .autohypesquad - Auto joins hypesquad if possible.
+41. .autoboost - Fakes boost client-side.
+42. .autoname <names...> - Rotates nickname.
+43. .autocolor <hex codes...> - Rotates role colors if perms.
+44. .autothread reply - Auto replies in threads.
+45. .autothread archive - Auto archives old threads.
+46. .autothread slowmode - Sets thread slowmode.
+47. .autoping <user> - Pings user on interval.
+48. .autoping stop - Stops ping loop.
+49. .autolog dm - Logs all DMs to file.
+50. .autolog mention - Logs mentions only.
+51. .autobio rotate start - Starts bio rotation loop.
+52. .autobio rotate stop - Stops bio rotation.
+53. .autonick rotate start - Starts nick rotation.
+54. .autonick rotate stop - Stops nick rotation.
+55. .autopfp rotate start - Starts pfp rotation.
+56. .autopfp rotate stop - Stops pfp rotation.
+57. .autobanner rotate - Rotates banner images.
+58. .autostatus music rotate - Rotates music statuses.
+59. .autostatus game rotate - Rotates game statuses.
+60. .autostatus custom rotate - Rotates custom statuses.
+61. .autopresence full rotate - Full presence cycle.
+62. .autoactivity join rotate - Rotates activity joins.
+63. .autovc join random - Random VC join loop.
+64. .autovc leave random - Random VC leave.
+65. .autovc deafen random - Random deafen toggle.
+66. .autovc mute random - Random mute toggle.
+67. .autovc sound spam - Sound spam in VC.
+68. .autoemoji spam <emoji> - Emoji spam loop.
+69. .autoreact spam <msg> - React spam on message.
+70. .autobutton spam <msg> - Button spam click.
+71. .automodal spam <modal> - Modal spam fill.
+72. .autopoll create spam - Poll create loop.
+73. .autopoll vote spam - Poll vote loop.
+74. .autothread create spam - Thread create loop.
+75. .autothread reply spam - Thread reply loop.
+76. .autothread mention spam - Thread mention loop.
+77. .autoeveryone spam - Everyone ping loop.
+78. .autohere spam - Here ping loop.
+79. .autorole ping spam - Role ping loop.
+80. .autouser ping spam - User ping loop.
+81. .autodm reply spam - DM reply loop.
+82. .autodm mass spam - Mass DM loop.
+83. .autodm schedule spam - Scheduled DM spam.
+84. .autokick on join spam - Kick on join loop.
+85. .autoban on join spam - Ban on join loop.
+86. .auto timeout spam - Timeout loop.
+87. .autoprune members spam - Prune loop.
+88. .autodelete messages spam - Delete loop.
+89. .autopurge after send - Purge after send.
+90. .autopurge timer start - Timed purge start.
+91. .autobackup server start - Server backup loop.
+92. .autobackup server stop - Stop backup loop.
+93. .autorestore server timer - Timed restore.
+94. .autonuke channels timer - Timed channel nuke.
+95. .autonuke roles timer - Timed role nuke.
+96. .autowebhook create spam - Webhook create loop.
+97. .autowebhook message spam - Webhook message loop.
+98. .autowebhook delete spam - Webhook delete loop.
+99. .autoinvite create spam - Invite create loop.
+100. .autoinvite delete spam - Invite delete loop.
+101. .autoevent create spam - Event create loop.
+102. .autoevent rsvp spam - Event RSVP loop.
+103. .autostage start spam - Stage start loop.
+104. .autostage topic spam - Stage topic loop.
+105. .autoforum post spam - Forum post loop.
+106. .autoforum tag spam - Forum tag loop.
+107. .autoonboarding edit spam - Onboarding edit loop.
+108. .autowelcome dm spam - Welcome DM loop.
+109. .autowelcome embed spam - Welcome embed loop.
+110. .autowelcome role spam - Welcome role loop.
+111. .autoleave timer start - Timed leave loop.
+112. .autoleave on keyword - Leave on keyword.
+113. .autoblock on dm - Block on DM.
+114. .autounfriend on dm - Unfriend on DM.
+115. .autounfriend timer - Timed unfriend.
+116. .autofriend request spam - Friend request loop.
+117. .autofriend accept spam - Accept loop.
+118. .autofriend remove spam - Remove friend loop.
+119. .autobio edit on mention - Bio edit on mention.
+120. .autostatus edit on mention - Status edit on mention.
+121. .autopfp change on mention - Pfp change on mention.
+122. .autonick change on mention - Nick change on mention.
+123. .autoreply custom list - Custom reply list.
+124. .autoreply dm custom - DM reply custom.
+125. .autoreply channel custom - Channel reply custom.
+126. .autoreply keyword case toggle - Case sensitive toggle.
+127. .autoreply regex add - Add regex reply.
+128. .autoreply regex remove - Remove regex.
+129. .autoreply cooldown set - Reply cooldown.
+130. .autotyping per message - Typing per msg.
+131. .autotyping random delay - Random typing delay.
+132. .autotyping fake long - Fake long typing.
+133. .autobump custom command - Custom bump cmd.
+134. .autobump random delay - Random bump delay.
+135. .autobump multi server - Multi-server bump.
+136. .autonitro claim sound - Nitro claim sound.
+137. .autonitro claim log - Nitro claim log.
+138. .autonitro claim webhook - Nitro webhook alert.
+139. .autokeyword dm webhook - Keyword DM webhook.
+140. .autokeyword mention webhook - Mention webhook.
+141. .autokeyword delete webhook - Delete webhook.
+142. .autokeyword edit webhook - Edit webhook.
+143. .autolog all to file - Log all to file.
+144. .autolog filter mentions - Filter mentions log.
+145. .autolog filter nitro - Filter nitro log.
+146. .autolog filter keywords - Filter keywords log.
+147. .autolog rotate files - Rotate log files.
+148. .autolog compress old - Compress old logs.
+149. .autolog upload drive fake - Fake drive upload.
+150. .autolog encrypt toggle - Toggle log encryption.
+
+
+=== MANAGEMENT (150 commands) ===
+1. .massdm file <txt file> <msg> - DMs all IDs from file.
+2. .massdm friends - DMs all friends.
+3. .massdm mutuals - DMs mutual server users.
+4. .massdm <message> - DMs all open DMs (existing).
+5. .gc whitelist [GC ID] - Whitelists GC from auto-leave.
+6. .gc trap <@user> - Traps user in GC by re-invite.
+7. .gc deny - Auto leaves new GCs.
+8. .gc allow - Accepts all GC invites.
+9. .closealldms - Closes all open DM channels.
+10. .purge <count> - Deletes last N own messages.
+11. .host <discord token> - Hosts new token/account.
+12. .massban <reason> - Bans all possible users.
+13. .masskick - Kicks all non-admins.
+14. .channel nuke - Deletes all channels.
+15. .role nuke - Deletes all roles.
+16. .emoji steal <server> - Copies all emojis.
+17. .webhook spam <url> <msg> - Spams webhook.
+18. .mass leave - Leaves all non-whitelisted servers.
+19. .mass friend remove - Removes all friends.
+20. .clone server <source> <new> - Clones server layout.
+21. .backup server - Exports server data to file.
+22. .massdm segmented <file> - DMs in segments to avoid rates.
+23. .massdm priority friends - Prioritizes friends in mass DM.
+24. .massdm priority recent - Prioritizes recent DMs.
+25. .massdm priority mutual - Prioritizes mutuals.
+26. .massdm exclude list - Excludes list from DM.
+27. .massdm template random - Randomizes message template.
+28. .massdm placeholder user - Uses {user} placeholder.
+29. .massdm placeholder server - Uses {server} placeholder.
+30. .massdm rate limit set - Sets DM rate limit.
+31. .massdm proxy rotate - Rotates proxies for DM.
+32. .massleave segmented - Leaves in batches.
+33. .massleave keyword filter - Leaves on keyword in name.
+34. .massleave member count filter - Leaves small/large servers.
+35. .massleave boost filter - Leaves non-boosted.
+36. .massleave owner filter - Leaves if not owner.
+37. .massfriend segmented - Friends in batches.
+38. .massfriend request delay - Delay between requests.
+39. .massfriend accept delay - Delay for accepts.
+40. .massfriend remove delay - Delay for removes.
+41. .massblock segmented - Blocks in batches.
+42. .massblock keyword dm - Blocks on DM keyword.
+43. .massunblock segmented - Unblocks in batches.
+44. .massreport user segmented - Reports users in batches.
+45. .massreport message segmented - Reports messages in batches.
+46. .massreport reason rotate - Rotates report reasons.
+47. .massreport proxy rotate - Rotates proxies for reports.
+48. .nukeserver full wipe - Full server nuke sequence.
+49. .nukeserver channels only - Nukes channels only.
+50. .nukeserver roles only - Nukes roles only.
+51. .nukeserver members only - Nukes members only.
+52. .nukeserver slow wipe - Slow nuke to avoid detection.
+53. .nukeserver fast wipe - Fast nuke mode.
+54. .nukeserver emoji wipe - Deletes all emojis.
+55. .nukeserver sticker wipe - Deletes stickers.
+56. .nukeserver webhook wipe - Deletes webhooks.
+57. .nukeserver invite wipe - Deletes invites.
+58. .nukeserver event wipe - Deletes events.
+59. .nukeserver stage wipe - Deletes stages.
+60. .nukeserver forum wipe - Deletes forums.
+61. .nukeserver onboarding wipe - Deletes onboarding.
+62. .clone server full - Full server clone.
+63. .clone server channels - Channels clone only.
+64. .clone server roles - Roles clone only.
+65. .clone server perms - Perms clone.
+66. .clone server emojis - Emojis clone.
+67. .clone server name - Name clone.
+68. .clone server icon - Icon clone.
+69. .clone server banner - Banner clone.
+70. .clone server vanity - Vanity clone.
+71. .backup server full json - Full JSON backup.
+72. .backup server incremental - Incremental backup.
+73. .backup server encrypted - Encrypted backup.
+74. .restore server full - Full restore.
+75. .restore server channels - Channels restore.
+76. .restore server roles - Roles restore.
+77. .restore server selective - Selective restore.
+78. .restore server dry run - Dry run restore test.
+79. .webhook mass create - Mass creates webhooks.
+80. .webhook mass spam random - Random spam on mass webhooks.
+81. .webhook mass rename - Mass renames webhooks.
+82. .webhook mass avatar - Mass changes avatars.
+83. .webhook mass delete - Mass deletes webhooks.
+84. .role mass create - Mass creates roles.
+85. .role mass delete - Mass deletes roles.
+86. .role mass color random - Random colors mass roles.
+87. .role mass hoist random - Random hoist mass.
+88. .role mass mention random - Random mentionable mass.
+89. .role mass integrate random - Random integrate mass.
+90. .channel mass create text - Mass text channels.
+91. .channel mass create voice - Mass voice channels.
+92. .channel mass create stage - Mass stage channels.
+93. .channel mass create forum - Mass forum channels.
+94. .channel mass delete - Mass deletes channels.
+95. .channel mass rename prefix - Prefix renames mass.
+96. .channel mass slowmode random - Random slowmode mass.
+97. .channel mass nsfw toggle - Mass NSFW toggle.
+98. .channel mass topic spam - Mass topic spam.
+99. .invite mass create temp - Mass temp invites.
+100. .invite mass create perm - Mass perm invites.
+101. .invite mass delete - Mass invite delete.
+102. .ban mass wave - Mass ban wave.
+103. .ban mass reason random - Random reasons mass ban.
+104. .unban mass wave - Mass unban.
+105. .timeout mass wave - Mass timeout.
+106. .untimeout mass wave - Mass untimeout.
+107. .prune mass members - Mass prune.
+108. .prune inactive only - Prune inactive only.
+109. .prune bot only - Prune bots only.
+110. .permission mass lock - Mass lock perms.
+111. .permission mass unlock - Mass unlock.
+112. .permission mass everyone deny - Deny everyone mass.
+113. .permission mass everyone allow - Allow everyone mass.
+114. .slowmode mass server - Slowmode all channels.
+115. .nsfw mass server - NSFW all channels.
+116. .topic mass server - Topic all channels.
+117. .rename mass channels - Rename all channels.
+118. .category mass create - Mass categories.
+119. .category mass delete - Mass category delete.
+120. .category mass rename - Mass category rename.
+121. .category mass position reset - Reset category positions.
+122. .role create <name> <color> - Creates new role.
+123. .role delete <id> - Deletes role.
+124. .role give <@user> <@role> - Gives role to user.
+125. .role take <@user> <@role> - Takes role from user.
+126. .role massgive <@role> - Gives role to all.
+127. .role masstake <@role> - Takes role from all.
+128. .channel create <name> <type> - Creates channel type.
+129. .channel delete <id> - Deletes channel.
+130. .channel masscreate <name> <count> - Mass create channels.
+131. .category create <name> - Creates category.
+132. .category delete <id> - Deletes category.
+133. .permission overwrite <target> <allow/deny> - Overwrites perms.
+134. .permission reset <channel> - Resets perms.
+135. .slowmode all <seconds> - Slowmode all channels.
+136. .nsfw all - NSFW all channels.
+137. .topic all <text> - Topic all channels.
+138. .rename all <prefix> - Prefix all channel names.
+139. .invite gen <uses> - Generates invites.
+140. .invite delete all - Deletes all invites.
+141. .ban wave <reason> - Ban wave on list.
+142. .unban wave <ids...> - Mass unban.
+143. .timeout <@user> <minutes> - Timeouts user.
+144. .untimeout <@user> - Removes timeout.
+145. .webhook list - Lists webhooks in server.
+146. .webhook rename <id> <name> - Renames webhook.
+147. .webhook avatar <id> <url> - Changes webhook avatar.
+148. .clonechannel <source id> - Clones channel.
+149. .clone role <source id> - Clones role.
+150. .backup channels - Exports channels JSON.
+
+
+=== OSINT (150 commands) ===
+1. .ip whois <ip> - Full WHOIS data for IP.
+2. .geo <user> - Guesses user location from timezone/servers.
+3. .token info <token> - Shows user info from token.
+4. .email check <email> - Checks breaches with HIBP.
+5. .username history <user> - Scrapes old usernames.
+6. .server scan <invite> - Scans server info without joining.
+7. .ghost ping <user> - Sends invisible ping and deletes.
+8. .keyword snipe <word> - Alerts on keyword in channels.
+9. .raid snipe <server id> - Monitors for invites/giveaways.
+10. .ip traceroute <ip> - Visual traceroute output.
+11. .ip proxycheck <ip> - Checks if IP is proxy/VPN.
+12. .ip abuseipdb <ip> - Pulls abuse reports.
+13. .domain whois <domain> - Full domain WHOIS.
+14. .domain dns <domain> - DNS records lookup.
+15. .email breach <email> - HIBP breach check.
+16. .email verify <email> - Verifies email existence.
+17. .phone lookup <number> - Carrier lookup.
+18. .username check <name> - Availability on sites.
+19. .username search <name> - Searches socials for username.
+20. .user snowflake <id> - Decodes creation date.
+21. .user badges <@user> - Lists badges.
+22. .user nitro <@user> - Guesses nitro type.
+23. .user connections <@user> - Shows linked accounts.
+24. .user mutuals <@user> - Counts mutual servers.
+25. .server members <invite> - Approx member count.
+26. .server splash <invite> - Gets splash URL.
+27. .server banner <invite> - Gets banner URL.
+28. .server vanity <invite> - Checks vanity.
+29. .server boosts <invite> - Guesses boost level.
+30. .token check <token> - Validates token + info.
+31. .token login <token> - Temp switches token.
+32. .token friends <token> - Lists friends from token.
+33. .token servers <token> - Lists servers from token.
+34. .token dms <token> - Lists open DMs.
+35. .leak check <query> - Searches leaks.
+36. .hash crack <hash> - Tries to crack hash. # educational content only
+37. .geo user <@user> - Location guess from user.
+38. .geo message <msg id> - Location guess from message.
+39. .snipe edit - Snipes last edited message.
+40. .snipe ghost - Snipes ghost pings.
+41. .snipe nitro - Alerts on deleted nitro.
+42. .keyword watch add <word> - Adds keyword watch.
+43. .keyword watch remove <word> - Removes watch.
+44. .keyword watch list - Lists watches.
+45. .link expand <shorturl> - Resolves short link.
+46. .link virus <url> - VirusTotal check.
+47. .link grabber <url> - Scrapes links from page.
+48. .image reverse <attachment> - Reverse image search.
+49. .image metadata <attachment> - EXIF dump.
+50. .file scan <attachment> - File type check.
+51. .qr decode <attachment> - Reads QR code.
+52. .ocr <attachment> - Extracts text from image.
+53. .captcha solve <attachment> - Attempts OCR captcha.
+54. .web archive <url> - Wayback link.
+55. .web title <url> - Gets page title.
+56. .web headers <url> - Shows headers.
+57. .web status <url> - HTTP status.
+58. .web whois <url> - Domain whois shortcut.
+59. .osint all <@user> - Full user recon suite.
+60. .ip geolocation detailed - Detailed IP location.
+61. .ip asn lookup - ASN lookup for IP.
+62. .ip hostname reverse - Reverse hostname.
+63. .ip blacklist check - Blacklist status.
+64. .ip tor exit check - TOR exit node check.
+65. .ip open ports guess - Guesses open ports.
+66. .domain age check - Domain age.
+67. .domain registrar lookup - Registrar info.
+68. .domain ns history - NS history.
+69. .domain subdomains enum - Enumerates subdomains.
+70. .domain email harvest - Harvests emails from domain.
+71. .email disposable check - Disposable email check.
+72. .email mx check - MX records check.
+73. .email smtp ping - SMTP ping.
+74. .email linked accounts guess - Guess linked accounts.
+75. .phone carrier lookup - Carrier for phone.
+76. .phone line type - Line type (mobile/land).
+77. .phone location guess - Location guess.
+78. .phone carrier name - Carrier name.
+79. .phone validity check - Validity check.
+80. .username matrix search - Matrix search on sites.
+81. .username breach check - Breach check for username.
+82. .username leak check - Leak search for username.
+83. .username social graph - Social graph guess.
+84. .user id history guess - ID history guess.
+85. .user creation wave - Creation wave analysis.
+86. .user join pattern - Join pattern.
+87. .user activity heatmap - Activity heatmap.
+88. .user timezone guess - Timezone guess.
+89. .user language guess - Language guess.
+90. .token email guess - Email from token.
+91. .token phone guess - Phone from token.
+92. .token avatar hash - Avatar hash.
+93. .token discriminator old - Old discriminator.
+94. .token nitro claim date - Nitro claim date.
+95. .token purchase history guess - Purchase guess.
+96. .server join date list - Join dates list.
+97. .server owner history - Owner history.
+98. .server boost history - Boost history.
+99. .server vanity history - Vanity history.
+100. .server emoji usage stats - Emoji stats.
+101. .server message count stats - Message stats.
+102. .server active hours - Active hours.
+103. .server timezone majority - Majority timezone.
+104. .server language majority - Majority language.
+105. .snipe bulk last 50 - Bulk snipe last 50 deletes.
+106. .snipe filter user - Snipe filter by user.
+107. .snipe filter keyword - Filter by keyword.
+108. .snipe filter embeds - Filter embeds.
+109. .snipe filter attachments - Filter attachments.
+110. .snipe filter nitro - Filter nitro.
+111. .snipe filter links - Filter links.
+112. .edit snipe bulk - Bulk edit snipes.
+113. .edit snipe diff view - Diff view of edits.
+114. .ghost ping log - Logs ghost pings.
+115. .ghost ping replay - Replays ghost pings.
+116. .keyword snipe bulk - Bulk keyword snipes.
+117. .keyword snipe webhook - Webhook for snipes.
+118. .keyword snipe sound - Sound for snipes.
+119. .link shortener detect - Detects shorteners.
+120. .link grabber recursive - Recursive link grab.
+121. .link grabber same domain - Same domain only.
+122. .link grabber external - External links only.
+123. .image reverse multi - Multi reverse search.
+124. .image metadata full - Full metadata dump.
+125. .image face detect - Face detection.
+126. .image nsfw score - NSFW score guess.
+127. .image similarity search - Similarity search.
+128. .file hash calc - Calculates file hash.
+129. .file virus total id - VirusTotal ID.
+130. .file strings extract - Extracts strings.
+131. .file type verify - Verifies file type.
+132. .qr multi decode - Multi QR decode.
+133. .ocr multi lang - Multi lang OCR.
+134. .captcha multi solve - Multi captcha attempt.
+135. .web archive diff - Archive diff view.
+136. .web archive first last - First/last archive.
+137. .web headers full - Full headers dump.
+138. .web cookies dump - Cookies dump.
+139. .web tech stack guess - Tech stack guess.
+140. .web server banner - Server banner info.
+141. .web cms detect - CMS detection.
+142. .web framework detect - Framework detection.
+143. .web ssl cert info - SSL cert info.
+144. .web ssl expiry - SSL expiry date.
+145. .web ssl issuer - SSL issuer.
+146. .web redirect chain - Redirect chain.
+147. .web status history - Status history.
+148. .osint user full dump - Full user dump.
+149. .osint server full dump - Full server dump.
+150. .osint token full dump - Full token dump.
+151. .osint ip full report - Full IP report.

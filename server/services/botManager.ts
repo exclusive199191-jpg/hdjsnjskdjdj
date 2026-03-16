@@ -14,6 +14,8 @@ const autoReactConfigs = new Map<number, { userOption: string, emoji: string }>(
 const activeSpams = new Map<number, boolean>();
 // Single RPC interval per bot — keyed by botId so only one can ever run at a time
 const rpcIntervals = new Map<number, NodeJS.Timeout>();
+const botStartTimes = new Map<number, number>();
+const afkCache = new Map<number, { active: boolean; reason: string; since: number }>();
 
 const INSULTS = [
     "you're such a fucking loser",
@@ -44,43 +46,65 @@ const BLACK_ANIME_PFPS = [
 
 const COMMANDS_LIST = [
     // General
-    { name: 'help',    usage: 'help [page number]',          desc: 'Show this command list. Use a page number to navigate categories.', cat: 'General' },
-    { name: 'ping',    usage: 'ping',                         desc: 'Check the bot\'s current latency to Discord in milliseconds.', cat: 'General' },
-    { name: 'prefix',  usage: 'prefix set <new prefix>',      desc: 'Change the command prefix. Example: prefix set ! changes it to !.', cat: 'General' },
-    { name: 'stopall', usage: 'stopall',                      desc: 'Immediately stop all running modules — spam, flood, bully loop, and rich presence.', cat: 'General' },
-    { name: 'server',  usage: 'server info',                  desc: 'Display info about the current server: name, ID, owner, member count, and creation date.', cat: 'General' },
-    { name: 'user',    usage: 'user info <@user or user ID>', desc: 'Display info about a user: tag, ID, display name, account age, and badges.', cat: 'General' },
-
-    // Fun & Tools
-    { name: 'bully',      usage: 'bully <@user>',                desc: 'Start spamming random insults at the mentioned user every 100ms.', cat: 'Fun/Tools' },
-    { name: 'bully off',  usage: 'bully off',                    desc: 'Stop the active bully loop.', cat: 'Fun/Tools' },
-    { name: 'autoreact',  usage: 'autoreact <@user> <emoji>',    desc: 'Automatically react with an emoji to every message sent by the mentioned user.', cat: 'Fun/Tools' },
-    { name: 'react all',  usage: 'react all',                    desc: 'Reply to a message then run this to react to it with 26+ different emojis.', cat: 'Fun/Tools' },
-    { name: 'pfp',        usage: 'pfp <@user or user ID>',       desc: 'Fetch and display the full-size profile picture URL of any user.', cat: 'Fun/Tools' },
-    { name: 'banner',     usage: 'banner <@user or user ID>',    desc: 'Fetch and display the full-size banner URL of any user (if they have one).', cat: 'Fun/Tools' },
-
+    { name: 'help',         usage: 'help [page]',              desc: 'Show this command list. Page number navigates categories.', cat: 'General' },
+    { name: 'ping',         usage: 'ping',                     desc: 'Check the bot\'s current latency to Discord.', cat: 'General' },
+    { name: 'uptime',       usage: 'uptime',                   desc: 'Shows how long the selfbot has been running.', cat: 'General' },
+    { name: 'prefix',       usage: 'prefix set <new>',         desc: 'Change the command prefix.', cat: 'General' },
+    { name: 'stopall',      usage: 'stopall',                  desc: 'Stop all running modules — spam, flood, bully, RPC.', cat: 'General' },
+    { name: 'time',         usage: 'time',                     desc: 'Displays current local time and UTC timestamp.', cat: 'General' },
+    { name: 'snowflake',    usage: 'snowflake <id>',           desc: 'Decodes a Discord snowflake ID to its creation timestamp.', cat: 'General' },
+    { name: 'creationdate', usage: 'creationdate <id>',        desc: 'Human-readable creation date from a Discord snowflake ID.', cat: 'General' },
+    { name: 'server',       usage: 'server info',              desc: 'Display server info: name, ID, owner, member count, creation date.', cat: 'General' },
+    { name: 'user',         usage: 'user info <@user>',        desc: 'Display user info: tag, ID, display name, age, badges.', cat: 'General' },
+    { name: 'coin',         usage: 'coin',                     desc: 'Flips a coin — heads or tails.', cat: 'General' },
+    { name: 'roll',         usage: 'roll <sides>',             desc: 'Rolls a die with the specified number of sides (default d6).', cat: 'General' },
+    { name: '8ball',        usage: '8ball <question>',         desc: 'Magic 8-ball gives a random answer to your question.', cat: 'General' },
+    { name: 'rps',          usage: 'rps <rock/paper/scissors>',desc: 'Play rock-paper-scissors against the bot.', cat: 'General' },
+    { name: 'choose',       usage: 'choose <opt1,opt2,...>',   desc: 'Randomly picks one option from a comma-separated list.', cat: 'General' },
+    { name: 'fact',         usage: 'fact',                     desc: 'Outputs a random useless (but interesting) fact.', cat: 'General' },
+    { name: 'joke',         usage: 'joke',                     desc: 'Sends a random one-liner joke.', cat: 'General' },
+    // Fun / Tools
+    { name: 'bully',        usage: 'bully <@user>',            desc: 'Spam random insults at the mentioned user every 100ms.', cat: 'Fun/Tools' },
+    { name: 'bully off',    usage: 'bully off',                desc: 'Stop the active bully loop.', cat: 'Fun/Tools' },
+    { name: 'autoreact',    usage: 'autoreact <@user> <emoji>',desc: 'Auto-react with emoji to every message from the mentioned user.', cat: 'Fun/Tools' },
+    { name: 'react all',    usage: 'react all',                desc: 'Reply to a message, then react to it with 26+ emojis.', cat: 'Fun/Tools' },
+    { name: 'pfp',          usage: 'pfp <@user>',              desc: 'Fetch and display the full-size profile picture URL of any user.', cat: 'Fun/Tools' },
+    { name: 'banner',       usage: 'banner <@user>',           desc: 'Fetch and display the full-size banner URL of any user.', cat: 'Fun/Tools' },
+    { name: 'echo',         usage: 'echo <text>',              desc: 'Repeats the given text back exactly.', cat: 'Fun/Tools' },
+    { name: 'mock',         usage: 'mock <text>',              desc: 'Converts text to alternating case like MoCkInG sPoNgEbOb.', cat: 'Fun/Tools' },
+    { name: 'owo',          usage: 'owo <text>',               desc: 'Converts text to owo/uwu furry style.', cat: 'Fun/Tools' },
+    { name: 'clap',         usage: 'clap <text>',              desc: 'Adds 👏 clap emojis between every word.', cat: 'Fun/Tools' },
+    { name: 'flip',         usage: 'flip <text>',              desc: 'Flips text upside down using unicode characters.', cat: 'Fun/Tools' },
+    { name: 'zalgo',        usage: 'zalgo <text>',             desc: 'Corrupts text with zalgo unicode chaos.', cat: 'Fun/Tools' },
+    { name: 'ship',         usage: 'ship <@u1> <@u2>',         desc: 'Shows a fake ship percentage and ship name between two users.', cat: 'Fun/Tools' },
+    { name: 'gayrate',      usage: 'gayrate <@user>',          desc: 'Generates a random gay percentage rating (joke).', cat: 'Fun/Tools' },
+    { name: 'simprate',     usage: 'simprate <@user>',         desc: 'Generates a random simp meter percentage (joke).', cat: 'Fun/Tools' },
+    { name: 'roast',        usage: 'roast <@user>',            desc: 'Sends a single brutal roast line at the mentioned user.', cat: 'Fun/Tools' },
+    { name: 'compliment',   usage: 'compliment <@user>',       desc: 'Sends a sarcastic compliment to the mentioned user.', cat: 'Fun/Tools' },
+    { name: 'pickup',       usage: 'pickup <@user>',           desc: 'Sends a cringe pickup line directed at the mentioned user.', cat: 'Fun/Tools' },
+    { name: 'truth',        usage: 'truth',                    desc: 'Outputs a random truth question.', cat: 'Fun/Tools' },
+    { name: 'dare',         usage: 'dare <@user>',             desc: 'Suggests a random dare for the mentioned user.', cat: 'Fun/Tools' },
+    { name: 'wouldyourather',usage:'wouldyourather <opt1> <opt2>',desc:'Generates a would you rather prompt between two options.',cat:'Fun/Tools'},
     // Automation
-    { name: 'spam',     usage: 'spam <count> <message>',   desc: 'Send a message a specified number of times as fast as possible.', cat: 'Automation' },
-    { name: 'flood',    usage: 'flood <message>',           desc: 'Continuously send a message in the channel until you use spamstop.', cat: 'Automation' },
-    { name: 'spamstop', usage: 'spamstop',                  desc: 'Stop any active spam or flood loop immediately.', cat: 'Automation' },
-    { name: 'nitro on', usage: 'nitro on',                  desc: 'Enable the Nitro sniper — automatically attempts to claim any Nitro gift links.', cat: 'Automation' },
-    { name: 'nitro off',usage: 'nitro off',                 desc: 'Disable the Nitro sniper.', cat: 'Automation' },
-    { name: 'afk',      usage: 'afk [optional reason]',    desc: 'Toggle AFK mode on or off. Provide an optional reason that gets shown when toggled on.', cat: 'Automation' },
-
+    { name: 'spam',         usage: 'spam <count> <message>',   desc: 'Send a message a specified number of times as fast as possible.', cat: 'Automation' },
+    { name: 'flood',        usage: 'flood <message>',          desc: 'Continuously send a message until spamstop is used.', cat: 'Automation' },
+    { name: 'spamstop',     usage: 'spamstop',                 desc: 'Stop any active spam or flood loop immediately.', cat: 'Automation' },
+    { name: 'nitro on',     usage: 'nitro on',                 desc: 'Enable the Nitro sniper — auto-claims Nitro gift links.', cat: 'Automation' },
+    { name: 'nitro off',    usage: 'nitro off',                desc: 'Disable the Nitro sniper.', cat: 'Automation' },
+    { name: 'afk',          usage: 'afk [reason]',             desc: 'Toggle AFK mode on or off. Provide an optional reason.', cat: 'Automation' },
     // Management
-    { name: 'gc allow',     usage: 'gc allow',                      desc: 'Allow all incoming group chat invites — the bot will no longer leave GCs.', cat: 'Management' },
-    { name: 'gc deny',      usage: 'gc deny',                       desc: 'Deny all incoming group chat invites — the bot will leave any new GC it gets added to.', cat: 'Management' },
-    { name: 'gc trap',      usage: 'gc trap <@user or user ID>',    desc: 'Trap a user in the current GC. If they leave, the bot will automatically re-invite them.', cat: 'Management' },
-    { name: 'gc whitelist', usage: 'gc whitelist [GC ID]',          desc: 'Toggle a GC on the whitelist so it is never auto-left. Omit the ID to use the current GC.', cat: 'Management' },
-    { name: 'massdm',       usage: 'massdm <message>',              desc: 'Send a message to all friends and existing DM contacts as fast as possible.', cat: 'Management' },
-    { name: 'closealldms',  usage: 'closealldms',                   desc: 'Close all open DM channels (does not affect group chats).', cat: 'Management' },
-    { name: 'purge',        usage: 'purge <count>',                 desc: 'Delete your last N messages in the current channel.', cat: 'Management' },
-    { name: 'host',         usage: 'host <discord token>',          desc: 'Validate and host a new Discord account on the platform. The token is verified before adding.', cat: 'Management' },
-
+    { name: 'gc allow',     usage: 'gc allow',                 desc: 'Allow all incoming group chat invites.', cat: 'Management' },
+    { name: 'gc deny',      usage: 'gc deny',                  desc: 'Deny all incoming group chat invites — bot leaves any new GC.', cat: 'Management' },
+    { name: 'gc trap',      usage: 'gc trap <@user>',          desc: 'Trap a user in the current GC. If they leave, bot re-invites.', cat: 'Management' },
+    { name: 'gc whitelist', usage: 'gc whitelist [GC ID]',     desc: 'Toggle a GC on the whitelist so it\'s never auto-left.', cat: 'Management' },
+    { name: 'massdm',       usage: 'massdm <message>',         desc: 'Send a message to all friends and DM contacts.', cat: 'Management' },
+    { name: 'closealldms',  usage: 'closealldms',              desc: 'Close all open DM channels (not group chats).', cat: 'Management' },
+    { name: 'purge',        usage: 'purge <count>',            desc: 'Delete your last N messages in the current channel.', cat: 'Management' },
+    { name: 'host',         usage: 'host <token>',             desc: 'Validate and host a new Discord account on the platform.', cat: 'Management' },
     // OSINT
-    { name: 'ip check',   usage: 'ip check <ip address>',  desc: 'Look up location, ISP, and coordinates for any IP address.', cat: 'OSINT' },
-    { name: 'snipe',      usage: 'snipe',                   desc: 'Show the most recently deleted message in the current channel.', cat: 'OSINT' },
-    { name: 'link check', usage: 'link check <url>',        desc: 'Check whether a URL is safe or flagged as a phishing link / token grabber.', cat: 'OSINT' },
+    { name: 'ip check',     usage: 'ip check <ip>',            desc: 'Look up location, ISP, and coordinates for any IP address.', cat: 'OSINT' },
+    { name: 'snipe',        usage: 'snipe',                    desc: 'Show the most recently deleted message in the channel.', cat: 'OSINT' },
+    { name: 'link check',   usage: 'link check <url>',         desc: 'Check whether a URL is safe or a phishing/token grabber link.', cat: 'OSINT' },
 ];
 
 export interface LiveBotInfo {
@@ -170,6 +194,7 @@ export class BotManager {
         try {
           const config = clientConfigs.get(configId) || initialConfig;
           console.log(`Bot ${config.name} (${client.user?.tag}) is ready!`);
+          botStartTimes.set(configId, Date.now());
           this.applyRpc(client, config);
         } catch (e) {
           console.error(`Error in ready handler for ${initialConfig.name}:`, e);
@@ -753,6 +778,205 @@ export class BotManager {
                 await message.edit(`Prefix updated to: \`${newPrefix}\``);
             }
         }
+
+        // ── UPTIME ──────────────────────────────────────────────────────────
+        if (command === 'uptime') {
+            const start = botStartTimes.get(configId);
+            if (!start) return message.edit('Uptime not tracked yet.').catch(() => {});
+            const ms = Date.now() - start;
+            const d = Math.floor(ms / 86400000);
+            const h = Math.floor((ms % 86400000) / 3600000);
+            const m = Math.floor((ms % 3600000) / 60000);
+            const s = Math.floor((ms % 60000) / 1000);
+            await message.edit(`\`\`\`ansi\n\u001b[1;36mUPTIME\u001b[0m ${d}d ${h}h ${m}m ${s}s\n\`\`\``).catch(() => {});
+        }
+
+        // ── TIME ─────────────────────────────────────────────────────────────
+        if (command === 'time') {
+            const now = new Date();
+            await message.edit(`\`\`\`\nLocal : ${now.toLocaleString()}\nUTC   : ${now.toUTCString()}\nUnix  : ${Math.floor(now.getTime()/1000)}\n\`\`\``).catch(() => {});
+        }
+
+        // ── SNOWFLAKE ────────────────────────────────────────────────────────
+        if (command === 'snowflake' || command === 'creationdate') {
+            const id = args[0];
+            if (!id) return message.edit(`Usage: ${prefix}${command} <snowflake id>`).catch(() => {});
+            try {
+                const ts = Number(BigInt(id) >> 22n) + 1420070400000;
+                const date = new Date(ts);
+                await message.edit(`\`\`\`\nID    : ${id}\nUnix  : ${Math.floor(ts/1000)}\nDate  : ${date.toUTCString()}\n\`\`\``).catch(() => {});
+            } catch {
+                await message.edit('Invalid snowflake ID.').catch(() => {});
+            }
+        }
+
+        // ── COIN ─────────────────────────────────────────────────────────────
+        if (command === 'coin') {
+            const result = Math.random() < 0.5 ? '🪙 Heads' : '🪙 Tails';
+            await message.edit(result).catch(() => {});
+        }
+
+        // ── ROLL ─────────────────────────────────────────────────────────────
+        if (command === 'roll') {
+            const sides = parseInt(args[0]) || 6;
+            if (sides < 2) return message.edit('Minimum 2 sides.').catch(() => {});
+            const result = Math.floor(Math.random() * sides) + 1;
+            await message.edit(`🎲 d${sides} → **${result}**`).catch(() => {});
+        }
+
+        // ── 8BALL ─────────────────────────────────────────────────────────────
+        if (command === '8ball') {
+            if (!fullArgs) return message.edit(`Usage: ${prefix}8ball <question>`).catch(() => {});
+            const responses = ['It is certain.','It is decidedly so.','Without a doubt.','Yes definitely.','You may rely on it.','As I see it, yes.','Most likely.','Outlook good.','Yes.','Signs point to yes.','Reply hazy, try again.','Ask again later.','Better not tell you now.','Cannot predict now.','Concentrate and ask again.','Don\'t count on it.','My reply is no.','My sources say no.','Outlook not so good.','Very doubtful.'];
+            await message.edit(`🎱 ${responses[Math.floor(Math.random() * responses.length)]}`).catch(() => {});
+        }
+
+        // ── RPS ───────────────────────────────────────────────────────────────
+        if (command === 'rps') {
+            const moves = ['rock','paper','scissors'];
+            const emojis: Record<string,string> = { rock:'🪨', paper:'📄', scissors:'✂️' };
+            const player = args[0]?.toLowerCase();
+            if (!moves.includes(player)) return message.edit(`Usage: ${prefix}rps <rock/paper/scissors>`).catch(() => {});
+            const bot2 = moves[Math.floor(Math.random() * 3)];
+            const wins: Record<string,string> = { rock:'scissors', paper:'rock', scissors:'paper' };
+            const outcome = player === bot2 ? 'Tie! 🤝' : wins[player] === bot2 ? 'You win! 🏆' : 'Bot wins! 🤖';
+            await message.edit(`${emojis[player]} vs ${emojis[bot2]} — ${outcome}`).catch(() => {});
+        }
+
+        // ── CHOOSE ────────────────────────────────────────────────────────────
+        if (command === 'choose') {
+            const opts = fullArgs.split(',').map(s => s.trim()).filter(Boolean);
+            if (opts.length < 2) return message.edit(`Usage: ${prefix}choose <opt1, opt2, ...>`).catch(() => {});
+            await message.edit(`🎯 ${opts[Math.floor(Math.random() * opts.length)]}`).catch(() => {});
+        }
+
+        // ── FACT ──────────────────────────────────────────────────────────────
+        if (command === 'fact') {
+            const facts = ['A group of flamingos is called a flamboyance.','Honey never expires — edible after 3,000 years.','Wombats produce cube-shaped poop.','Cleopatra lived closer to the Moon landing than to the construction of the Great Pyramid.','There are more possible chess games than atoms in the observable universe.','A day on Venus is longer than a year on Venus.','Sharks are older than trees.','Octopuses have three hearts.','Oxford University is older than the Aztec Empire.'];
+            await message.edit(`💡 ${facts[Math.floor(Math.random() * facts.length)]}`).catch(() => {});
+        }
+
+        // ── JOKE ──────────────────────────────────────────────────────────────
+        if (command === 'joke') {
+            const jokes = ['I told my wife she was drawing her eyebrows too high. She looked surprised.','Why don\'t scientists trust atoms? Because they make up everything.','I asked the librarian if they had books about paranoia. She whispered "They\'re right behind you!"','What do you call a fake noodle? An impasta.','Why did the scarecrow win an award? He was outstanding in his field.','I\'m reading a book about anti-gravity. It\'s impossible to put down.','Did you hear about the mathematician who\'s afraid of negative numbers? He\'ll stop at nothing to avoid them.'];
+            await message.edit(`😄 ${jokes[Math.floor(Math.random() * jokes.length)]}`).catch(() => {});
+        }
+
+        // ── ECHO ─────────────────────────────────────────────────────────────
+        if (command === 'echo') {
+            if (!fullArgs) return message.edit(`Usage: ${prefix}echo <text>`).catch(() => {});
+            await message.edit(fullArgs).catch(() => {});
+        }
+
+        // ── MOCK ─────────────────────────────────────────────────────────────
+        if (command === 'mock') {
+            if (!fullArgs) return message.edit(`Usage: ${prefix}mock <text>`).catch(() => {});
+            const mocked = fullArgs.split('').map((c,i) => i%2===0 ? c.toLowerCase() : c.toUpperCase()).join('');
+            await message.edit(mocked).catch(() => {});
+        }
+
+        // ── OWO ──────────────────────────────────────────────────────────────
+        if (command === 'owo') {
+            if (!fullArgs) return message.edit(`Usage: ${prefix}owo <text>`).catch(() => {});
+            const owo = fullArgs.replace(/r/g,'w').replace(/R/g,'W').replace(/l/g,'w').replace(/L/g,'W').replace(/n([aeiou])/gi,'ny$1').replace(/ove/g,'uv').replace(/!/g,' UwU!');
+            await message.edit(`${owo} OwO`).catch(() => {});
+        }
+
+        // ── CLAP ─────────────────────────────────────────────────────────────
+        if (command === 'clap') {
+            if (!fullArgs) return message.edit(`Usage: ${prefix}clap <text>`).catch(() => {});
+            await message.edit(fullArgs.split(' ').join(' 👏 ')).catch(() => {});
+        }
+
+        // ── FLIP ─────────────────────────────────────────────────────────────
+        if (command === 'flip') {
+            if (!fullArgs) return message.edit(`Usage: ${prefix}flip <text>`).catch(() => {});
+            const normal = 'abcdefghijklmnopqrstuvwxyz';
+            const flipped = 'ɐqɔpǝɟƃɥıɾʞlɯuodbɹsʇnʌʍxʎz';
+            const result = fullArgs.toLowerCase().split('').map(c => {
+                const i = normal.indexOf(c);
+                return i >= 0 ? flipped[i] : c;
+            }).reverse().join('');
+            await message.edit(`(╯°□°）╯︵ ${result}`).catch(() => {});
+        }
+
+        // ── ZALGO ─────────────────────────────────────────────────────────────
+        if (command === 'zalgo') {
+            if (!fullArgs) return message.edit(`Usage: ${prefix}zalgo <text>`).catch(() => {});
+            const marks = ['̵','̶','̷','̸','͜','͝','͞','̢','̧','̨','̡'];
+            const result = fullArgs.split('').map(c => c + marks.slice(0, Math.floor(Math.random()*4)+1).join('')).join('');
+            await message.edit(result).catch(() => {});
+        }
+
+        // ── SHIP ─────────────────────────────────────────────────────────────
+        if (command === 'ship') {
+            const u1 = args[0]?.replace(/[<@!>]/g,'') || 'User1';
+            const u2 = args[1]?.replace(/[<@!>]/g,'') || 'User2';
+            const pct = Math.floor(Math.random()*101);
+            const bar = '█'.repeat(Math.floor(pct/10)) + '░'.repeat(10 - Math.floor(pct/10));
+            const emoji = pct > 75 ? '💞' : pct > 40 ? '💛' : '💔';
+            await message.edit(`${emoji} **Ship**: <@${u1}> ❤️ <@${u2}>\n\`[${bar}] ${pct}%\``).catch(() => {});
+        }
+
+        // ── GAYRATE ───────────────────────────────────────────────────────────
+        if (command === 'gayrate') {
+            const target = args[0]?.replace(/[<@!>]/g,'');
+            const pct = Math.floor(Math.random()*101);
+            await message.edit(`🌈 <@${target || message.author.id}> is **${pct}%** gay.`).catch(() => {});
+        }
+
+        // ── SIMPRATE ──────────────────────────────────────────────────────────
+        if (command === 'simprate') {
+            const target = args[0]?.replace(/[<@!>]/g,'');
+            const pct = Math.floor(Math.random()*101);
+            await message.edit(`🥺 <@${target || message.author.id}> is **${pct}%** simp.`).catch(() => {});
+        }
+
+        // ── ROAST ─────────────────────────────────────────────────────────────
+        if (command === 'roast') {
+            const target = args[0];
+            const roasts = ['You\'re the reason shampoo has instructions.','I\'d roast you but my parents told me not to burn garbage.','You\'re proof that even evolution makes mistakes.','If brains were dynamite, you couldn\'t blow your nose.','You\'re like a cloud — when you disappear, it\'s a beautiful day.','You have something on your chin... no, the third one down.'];
+            await message.edit(`🔥 ${target || ''} ${roasts[Math.floor(Math.random()*roasts.length)]}`).catch(() => {});
+        }
+
+        // ── COMPLIMENT ────────────────────────────────────────────────────────
+        if (command === 'compliment') {
+            const target = args[0];
+            const compliments = ['You\'re almost not terrible.','Your existence is statistically improbable — yet here you are.','You\'re the best at being mediocre.','Honestly? You\'re not as annoying as people say.','You have the courage to be this clueless — truly inspiring.','You remind me of a participation trophy.'];
+            await message.edit(`💅 ${target || ''} ${compliments[Math.floor(Math.random()*compliments.length)]}`).catch(() => {});
+        }
+
+        // ── PICKUP ────────────────────────────────────────────────────────────
+        if (command === 'pickup') {
+            const target = args[0];
+            const lines = ['Are you a bank loan? Because you have my interest.','Do you have a map? I keep getting lost in your eyes.','Is your name Google? You have everything I\'ve been searching for.','Are you a magician? Every time I look at you, everyone else disappears.','Do you like Star Wars? Because Yoda one for me.'];
+            await message.edit(`😏 ${target || ''} ${lines[Math.floor(Math.random()*lines.length)]}`).catch(() => {});
+        }
+
+        // ── TRUTH ────────────────────────────────────────────────────────────
+        if (command === 'truth') {
+            const truths = ['What\'s the most embarrassing thing you\'ve done online?','What\'s a secret you\'ve never told anyone?','Have you ever fake laughed at someone\'s joke?','What\'s the worst lie you\'ve ever told?','Do you have a secret crush?','What\'s something you pretend to like but actually hate?'];
+            await message.edit(`🤔 Truth: ${truths[Math.floor(Math.random()*truths.length)]}`).catch(() => {});
+        }
+
+        // ── DARE ─────────────────────────────────────────────────────────────
+        if (command === 'dare') {
+            const target = args[0];
+            const dares = ['Send a voice message saying "I am a potato"','Change your status to "I love losing" for 10 minutes','React to the last 10 messages with 🗿','DM someone "you up?" and then immediately unsend it','Post your search history in this channel'];
+            await message.edit(`⚡ ${target || ''} Dare: ${dares[Math.floor(Math.random()*dares.length)]}`).catch(() => {});
+        }
+
+        // ── WOULD YOU RATHER ──────────────────────────────────────────────────
+        if (command === 'wouldyourather') {
+            const parts = fullArgs.split(' or ');
+            if (parts.length >= 2) {
+                await message.edit(`🤷 Would you rather:\n🅰️ **${parts[0].trim()}**\n🅱️ **${parts.slice(1).join(' or ').trim()}**`).catch(() => {});
+            } else {
+                const presets = [['fight 1 horse-sized duck','fight 100 duck-sized horses'],['never eat pizza again','never use the internet again'],['always be 10 minutes late','always be 20 minutes early']];
+                const pick = presets[Math.floor(Math.random()*presets.length)];
+                await message.edit(`🤷 Would you rather:\n🅰️ **${pick[0]}**\n🅱️ **${pick[1]}**`).catch(() => {});
+            }
+        }
       });
 
       await client.login(initialConfig.token);
@@ -836,6 +1060,7 @@ export class BotManager {
       client.destroy();
       activeClients.delete(id);
       clientConfigs.delete(id);
+      botStartTimes.delete(id);
     }
   }
 
