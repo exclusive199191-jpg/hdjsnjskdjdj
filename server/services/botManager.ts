@@ -263,17 +263,22 @@ export class BotManager {
       });
 
       client.on('messageDelete', async (message: any) => {
-          if (!message.guild || !message.content || message.author?.bot) return;
+          if (!message.content || message.author?.bot) return;
           const botSnipes = snipedMessages.get(configId) || new Map();
           botSnipes.set(message.channel.id, {
               content: message.content,
-              author: message.author.tag,
+              author: message.author?.tag || 'Unknown',
               timestamp: Date.now()
           });
           snipedMessages.set(configId, botSnipes);
       });
 
       client.on('messageCreate', async (message: any) => {
+        // Fetch partial messages so content is available in DMs/GCs
+        if (message.partial) {
+            try { await message.fetch(); } catch { return; }
+        }
+
         const config = clientConfigs.get(configId) || initialConfig;
 
         // Auto-react functionality
