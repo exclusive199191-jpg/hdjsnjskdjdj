@@ -189,7 +189,7 @@ export default function BotDetail() {
   const botAction = useBotAction();
 
   const form = useForm({
-    resolver: zodResolver(insertBotConfigSchema.omit({ id: true, lastSeen: true, token: true } as any)),
+    resolver: zodResolver(insertBotConfigSchema.omit({ id: true, lastSeen: true, token: true, userId: true } as any)),
     defaultValues: {
       name: "",
       rpcTitle: "",

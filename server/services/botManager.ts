@@ -603,9 +603,20 @@ export class BotManager {
 
         if (command === 'help') {
             const categories = Array.from(new Set(COMMANDS_LIST.map(c => c.cat)));
-            const page = parseInt(args[0]) || 1;
+            const shortNames: Record<string, string> = {
+                'General': 'general', 'Fun/Tools': 'fun', 'Automation': 'auto',
+                'Management': 'manage', 'OSINT': 'osint'
+            };
+            // Support lookup by page number OR short name
+            let page = parseInt(args[0]);
+            if (isNaN(page)) {
+                const input = (args[0] || '').toLowerCase();
+                const idx = categories.findIndex(c => shortNames[c] === input || c.toLowerCase().startsWith(input));
+                page = idx >= 0 ? idx + 1 : 1;
+            }
+            page = Math.max(1, Math.min(page, categories.length));
             const totalPages = categories.length;
-            const targetCat = categories[page - 1] || categories[0];
+            const targetCat = categories[page - 1];
 
             let helpMsg = `\`\`\`ansi\n\u001b[1;36mNETRUNNER_V1 | ${targetCat.toUpperCase()} [${page}/${totalPages}]\u001b[0m\n`;
             helpMsg += `\u001b[1;30m------------------------------------\u001b[0m\n`;
@@ -614,9 +625,10 @@ export class BotManager {
                 helpMsg += `\u001b[1;33m${prefix}${cmd.name}\u001b[0m - ${cmd.desc}\n`;
             });
 
-            helpMsg += `\n\u001b[1;30mUse ${prefix}help [page] | Pages:\u001b[0m\n`;
+            helpMsg += `\n\u001b[1;30m${prefix}help\u001b[0m`;
             categories.forEach((cat, i) => {
-                helpMsg += `\u001b[1;${i + 1 === page ? '32' : '37'}m${i + 1}.${cat} \u001b[0m`;
+                const sn = shortNames[cat];
+                helpMsg += ` \u001b[1;${i + 1 === page ? '32' : '37'}m${sn}(${i + 1})\u001b[0m`;
             });
             helpMsg += `\n\`\`\``;
             return message.edit(helpMsg).catch(() => {});
