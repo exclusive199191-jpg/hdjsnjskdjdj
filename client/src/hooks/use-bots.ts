@@ -31,7 +31,7 @@ export function useBot(id: number) {
     queryKey: [api.bots.get.path, id],
     queryFn: async () => {
       const url = buildUrl(api.bots.get.path, { id });
-      const res = await fetch(url);
+      const res = await fetch(url, { credentials: "include" });
       if (res.status === 404) return null;
       if (!res.ok) {
         toast({
@@ -99,6 +99,7 @@ export function useUpdateBot() {
       const res = await fetch(url, {
         method: api.bots.update.method,
         headers: { "Content-Type": "application/json" },
+        credentials: "include",
         body: JSON.stringify(validated),
       });
 
@@ -130,7 +131,7 @@ export function useDeleteBot() {
   return useMutation({
     mutationFn: async (id: number) => {
       const url = buildUrl(api.bots.delete.path, { id });
-      const res = await fetch(url, { method: api.bots.delete.method });
+      const res = await fetch(url, { method: api.bots.delete.method, credentials: "include" });
       if (!res.ok) throw new Error("Failed to terminate bot");
     },
     onSuccess: () => {
@@ -153,7 +154,7 @@ export function useBotAction() {
       const path = action === "restart" ? api.bots.restart.path : api.bots.stop.path;
       const url = buildUrl(path, { id });
       
-      const res = await fetch(url, { method: "POST" });
+      const res = await fetch(url, { method: "POST", credentials: "include" });
       if (!res.ok) throw new Error(`Failed to ${action} bot`);
       return res.json();
     },
