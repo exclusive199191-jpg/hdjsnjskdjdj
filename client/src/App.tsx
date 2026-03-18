@@ -6,6 +6,7 @@ import { TooltipProvider } from "@/components/ui/tooltip";
 import NotFound from "@/pages/not-found";
 import Dashboard from "@/pages/Dashboard";
 import BotDetail from "@/pages/BotDetail";
+import Admin from "@/pages/Admin";
 import { Component, type ReactNode, type ErrorInfo } from "react";
 import { AlertTriangle, RefreshCw } from "lucide-react";
 
@@ -62,6 +63,7 @@ function Router() {
     <Switch>
       <Route path="/" component={Dashboard} />
       <Route path="/bot/:id" component={BotDetail} />
+      <Route path="/admin" component={Admin} />
       <Route component={NotFound} />
     </Switch>
   );
