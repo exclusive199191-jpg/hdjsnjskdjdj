@@ -1644,25 +1644,41 @@ export class BotManager {
         // Always clear any previous RPC interval for this bot first
         this.clearRpcInterval(config.id);
 
-        const rpcType = (config.rpcType?.toUpperCase() || "PLAYING") as string;
-
-        // Build the activity object — only include optional fields when they have valid values
-        // Discord requires details/state to be at least 2 characters
         const details = config.rpcTitle?.trim();
         const state = config.rpcSubtitle?.trim();
-        const appName = config.rpcAppName?.trim() || "discord";
+        const appName = config.rpcAppName?.trim();
+        const hasRpc = appName || (details && details.length >= 2) || (state && state.length >= 2);
+
+        // Nothing configured — clear presence and return
+        if (!hasRpc) {
+            try {
+                client.user.setPresence({ status: 'online', afk: false, activities: [] });
+            } catch (_) {}
+            return;
+        }
+
+        // Map string type → numeric ActivityType (discord.js-selfbot-v13 requirement)
+        const typeMap: Record<string, number> = {
+            PLAYING: 0,
+            STREAMING: 1,
+            LISTENING: 2,
+            WATCHING: 3,
+            COMPETING: 5,
+        };
+        const rpcTypeStr = (config.rpcType?.toUpperCase() || "PLAYING");
+        const rpcTypeNum = typeMap[rpcTypeStr] ?? 0;
 
         const rpc: any = {
-            name: appName,
-            type: rpcType,
+            name: appName || "discord",
+            type: rpcTypeNum,
         };
 
-        // url is only valid for STREAMING type
-        if (rpcType === "STREAMING") {
+        // url is required for STREAMING type
+        if (rpcTypeNum === 1) {
             rpc.url = "https://www.twitch.tv/discord";
         }
 
-        // Discord requires these to be at least 2 chars
+        // Discord requires details/state to be at least 2 chars
         if (details && details.length >= 2) rpc.details = details;
         if (state && state.length >= 2) rpc.state = state;
 
@@ -1683,7 +1699,7 @@ export class BotManager {
             };
         }
 
-        console.log(`Applying RPC for ${client.user.tag}:`, JSON.stringify(rpc, null, 2));
+        console.log(`[RPC] Applying for ${client.user.tag}:`, JSON.stringify(rpc));
 
         const applyPresence = () => {
             if (!client.user) return;
@@ -1694,13 +1710,13 @@ export class BotManager {
                     activities: [rpc],
                 });
             } catch (e) {
-                console.error(`Failed to set activity for ${client.user?.tag}:`, e);
+                console.error(`[RPC] Failed to set activity for ${client.user?.tag}:`, e);
             }
         };
 
         applyPresence();
 
-        // Refresh every 30s to keep presence alive
+        // Refresh every 30s to keep presence alive (Discord clears it after inactivity)
         const interval = setInterval(applyPresence, 30000);
         rpcIntervals.set(config.id, interval);
     }
@@ -1734,10 +1750,24 @@ export class BotManager {
     const updated = await storage.updateBot(id, updates);
     if (!updated) return;
     clientConfigs.set(id, updated);
-    const client = activeClients.get(id);
-    if (client) {
-      console.log(`Config updated for bot ${id}, re-applying RPC...`);
-      this.applyRpc(client, updated);
+
+    const isCurrentlyRunning = activeClients.has(id);
+    const wantsRunning = updates.isRunning;
+
+    // Handle isRunning toggle: start or stop the bot as needed
+    if (wantsRunning === true && !isCurrentlyRunning) {
+      console.log(`[manager] Starting bot ${id} due to isRunning=true`);
+      this.startBot(updated).catch(e => console.error(`[manager] Failed to start bot ${id}:`, e));
+    } else if (wantsRunning === false && isCurrentlyRunning) {
+      console.log(`[manager] Stopping bot ${id} due to isRunning=false`);
+      this.stopBot(id).catch(e => console.error(`[manager] Failed to stop bot ${id}:`, e));
+    } else {
+      // No start/stop needed — just re-apply RPC if running
+      const client = activeClients.get(id);
+      if (client) {
+        console.log(`[manager] Config updated for bot ${id}, re-applying RPC...`);
+        this.applyRpc(client, updated);
+      }
     }
   }
 }
