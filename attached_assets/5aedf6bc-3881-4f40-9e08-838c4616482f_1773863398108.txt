@@ -1,0 +1,33 @@
+2026-03-18T19:44:39.041195028Z [info] Starting Container
+2026-03-18T19:44:40.905568747Z [error] npm warn config production Use `--omit=dev` instead.
+2026-03-18T19:44:40.905577986Z [info] 
+2026-03-18T19:44:40.905584928Z [info] > rest-express@1.0.0 start
+2026-03-18T19:44:40.905591121Z [info] > NODE_ENV=production node dist/index.cjs
+2026-03-18T19:44:40.905597902Z [info] 
+2026-03-18T19:44:40.905606040Z [info] [session] Generated and saved new SESSION_SECRET to disk
+2026-03-18T19:44:43.613106923Z [error]   position: '14',
+2026-03-18T19:44:43.613114547Z [info] [db] Tables ensured in PostgreSQL
+2026-03-18T19:44:43.613126043Z [info] [session] Using PostgreSQL session store
+2026-03-18T19:44:43.613137818Z [info] 7:44:42 PM [express] serving on port 8080
+2026-03-18T19:44:43.613139092Z [error]     at process.processTicksAndRejections (node:internal/process/task_queues:103:5)
+2026-03-18T19:44:43.613147639Z [error] [startup] startAll failed: error: column "user_id" does not exist
+2026-03-18T19:44:43.613152841Z [error]     at async /app/dist/index.cjs:84:97674
+2026-03-18T19:44:43.613157278Z [error]     at /app/dist/index.cjs:68:13326
+2026-03-18T19:44:43.613163189Z [error]     at async Timeout._onTimeout (/app/dist/index.cjs:181:4931) {
+2026-03-18T19:44:43.613171075Z [error]   length: 107,
+2026-03-18T19:44:43.613178910Z [error]   severity: 'ERROR',
+2026-03-18T19:44:43.613187825Z [error]   code: '42703',
+2026-03-18T19:44:43.613195526Z [error]   detail: undefined,
+2026-03-18T19:44:43.613208064Z [error]   hint: undefined,
+2026-03-18T19:44:43.615433285Z [error]   internalPosition: undefined,
+2026-03-18T19:44:43.615446882Z [error]   internalQuery: undefined,
+2026-03-18T19:44:43.615454465Z [error]   where: undefined,
+2026-03-18T19:44:43.615461961Z [error]   schema: undefined,
+2026-03-18T19:44:43.615469009Z [error]   table: undefined,
+2026-03-18T19:44:43.615477259Z [error]   column: undefined,
+2026-03-18T19:44:43.615483885Z [error]   dataType: undefined,
+2026-03-18T19:44:43.615490781Z [error]   constraint: undefined,
+2026-03-18T19:44:43.615498367Z [error]   file: 'parse_relation.c',
+2026-03-18T19:44:43.615505772Z [error]   line: '3716',
+2026-03-18T19:44:43.615513734Z [error]   routine: 'errorMissingColumn'
+2026-03-18T19:44:43.615521073Z [error] }
