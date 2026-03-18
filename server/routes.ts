@@ -172,7 +172,7 @@ export async function registerRoutes(
       userId: req.session.userId!,
       name: name.trim(),
       token: token.trim(),
-      isRunning: true,
+      isRunning: false,
       discordTag: "",
       discordId: "",
       lastSeen: null,
@@ -190,12 +190,15 @@ export async function registerRoutes(
       gcAllowAll: false,
       whitelistedGcs: [],
     });
-    try {
-      await BotManager.startBot(bot);
-    } catch (err) {
-      console.warn(`[routes] Bot ${bot.id} failed to start on create:`, err);
+
+    const result = await BotManager.startBot(bot);
+    if (!result.success) {
+      await storage.deleteBot(bot.id);
+      return res.status(400).json({ message: result.error || "Failed to connect bot" });
     }
-    return res.status(201).json(bot);
+
+    const fresh = await storage.getBot(bot.id);
+    return res.status(201).json({ ...fresh, isRunning: BotManager.isRunning(bot.id) });
   }));
 
   app.get("/api/bots/:id", requireAuth, wrap(async (req, res) => {

@@ -151,9 +151,9 @@ export class BotManager {
     }
   }
 
-  static async startBot(initialConfig: BotConfig) {
+  static async startBot(initialConfig: BotConfig): Promise<{ success: boolean; error?: string }> {
     const configId = initialConfig.id;
-    if (activeClients.has(configId)) return;
+    if (activeClients.has(configId)) return { success: true };
 
     try {
       let clientOptions: any = {
@@ -1625,8 +1625,16 @@ export class BotManager {
 
       await client.login(initialConfig.token);
       activeClients.set(configId, client);
-    } catch (e) {
+      return { success: true };
+    } catch (e: any) {
       console.error(`Failed to start bot ${initialConfig.name}:`, e);
+      // Mark as offline in storage so the DB stays consistent
+      await storage.updateBot(configId, { isRunning: false }).catch(() => {});
+      const msg = e?.message || String(e);
+      const friendly = msg.includes('TOKEN_INVALID') || msg.includes('token')
+        ? 'Invalid Discord token — double-check and try again.'
+        : `Failed to connect: ${msg}`;
+      return { success: false, error: friendly };
     }
   }
 
