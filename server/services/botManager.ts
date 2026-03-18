@@ -16,6 +16,7 @@ const activeSpams = new Map<number, boolean>();
 const rpcIntervals = new Map<number, NodeJS.Timeout>();
 const botStartTimes = new Map<number, number>();
 const afkCache = new Map<number, { active: boolean; reason: string; since: number }>();
+const voiceConnections = new Map<number, any>(); // botId -> VoiceConnection
 
 const INSULTS = [
     "you're such a fucking loser",
@@ -1463,9 +1464,23 @@ export class BotManager {
 
         // ── MOCK ─────────────────────────────────────────────────────────────
         if (command === 'mock') {
-            if (!fullArgs) return message.edit(`Usage: ${prefix}mock <text>`).catch(() => {});
-            const mocked = fullArgs.split('').map((c: string, i: number) => i%2===0 ? c.toLowerCase() : c.toUpperCase()).join('');
-            await message.edit(mocked).catch(() => {});
+            const mentionMatch = fullArgs?.match(/^<@!?(\d+)>/);
+            if (mentionMatch) {
+                const targetId = mentionMatch[1];
+                try {
+                    const fetched = await message.channel.messages.fetch({ limit: 50 });
+                    const targetMsg = fetched.find((m: any) => m.author.id === targetId && m.id !== message.id && m.content?.trim());
+                    if (!targetMsg) return message.edit(`❌ Couldn't find a recent message from that user.`).catch(() => {});
+                    const mocked = targetMsg.content.split('').map((c: string, i: number) => i % 2 === 0 ? c.toLowerCase() : c.toUpperCase()).join('');
+                    await message.edit(`mOcKiNg <@${targetId}>: ${mocked}`).catch(() => {});
+                } catch {
+                    await message.edit(`❌ Failed to fetch messages.`).catch(() => {});
+                }
+            } else {
+                if (!fullArgs) return message.edit(`Usage: ${prefix}mock <@user> or ${prefix}mock <text>`).catch(() => {});
+                const mocked = fullArgs.split('').map((c: string, i: number) => i % 2 === 0 ? c.toLowerCase() : c.toUpperCase()).join('');
+                await message.edit(mocked).catch(() => {});
+            }
         }
 
         // ── OWO ──────────────────────────────────────────────────────────────
@@ -1570,6 +1585,42 @@ export class BotManager {
                 await message.edit(`🤷 Would you rather:\n🅰️ **${pick[0]}**\n🅱️ **${pick[1]}**`).catch(() => {});
             }
         }
+
+        // ── JOIN VC ───────────────────────────────────────────────────────────
+        if (command === 'joinvc') {
+            const channelId = args[0];
+            if (!channelId) return message.edit(`Usage: ${prefix}joinvc <channel_id>`).catch(() => {});
+            try {
+                const channel = client.channels.cache.get(channelId) || await client.channels.fetch(channelId).catch(() => null);
+                if (!channel) return message.edit(`❌ Channel \`${channelId}\` not found.`).catch(() => {});
+                if (channel.type !== 'GUILD_VOICE' && channel.type !== 'GUILD_STAGE_VOICE') {
+                    return message.edit(`❌ That channel is not a voice channel.`).catch(() => {});
+                }
+                const existing = voiceConnections.get(configId);
+                if (existing) {
+                    try { existing.disconnect(); } catch {}
+                    voiceConnections.delete(configId);
+                }
+                const connection = await client.voice.joinChannel(channel, { selfDeaf: false, selfMute: false });
+                voiceConnections.set(configId, connection);
+                await message.edit(`🎙️ Joined **${(channel as any).name}** — farming stats!`).catch(() => {});
+            } catch (e: any) {
+                await message.edit(`❌ Failed to join VC: ${e?.message || 'Unknown error'}`).catch(() => {});
+            }
+        }
+
+        // ── LEAVE VC ──────────────────────────────────────────────────────────
+        if (command === 'leavevc') {
+            const connection = voiceConnections.get(configId);
+            if (!connection) return message.edit(`❌ Not in a voice channel.`).catch(() => {});
+            try {
+                connection.disconnect();
+                voiceConnections.delete(configId);
+                await message.edit(`👋 Left voice channel.`).catch(() => {});
+            } catch (e: any) {
+                await message.edit(`❌ Failed to leave VC: ${e?.message || 'Unknown error'}`).catch(() => {});
+            }
+        }
       });
 
       await client.login(initialConfig.token);
@@ -1656,6 +1707,11 @@ export class BotManager {
 
   static async stopBot(id: number) {
     this.clearRpcInterval(id);
+    const vcConn = voiceConnections.get(id);
+    if (vcConn) {
+      try { vcConn.disconnect(); } catch {}
+      voiceConnections.delete(id);
+    }
     const client = activeClients.get(id);
     if (client) {
       client.destroy();
