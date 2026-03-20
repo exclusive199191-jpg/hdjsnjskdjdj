@@ -1344,30 +1344,61 @@ export class BotManager {
                 await message.edit(`\`\`\`ansi\n\u001b[1;31m[!] Usage: ${prefix}massdm <message>\u001b[0m\n\`\`\``).catch(() => {});
                 return;
             }
-            await message.edit(`\`\`\`ansi\n\u001b[1;33m[~] Sending DMs to all friends...\u001b[0m\n\`\`\``).catch(() => {});
-            const friends: any[] = [...((client as any).relationships?.friends?.values() ?? [])];
-            if (friends.length === 0) {
+
+            // discord.js-selfbot-v13 exposes relationships as a Map of userId → type (number).
+            // Type 1 = friend. We collect all friend user IDs from the cache.
+            const relationshipCache: Map<string, number> = (client as any).relationships?.cache ?? new Map();
+            const friendIds: string[] = [];
+            for (const [userId, type] of relationshipCache.entries()) {
+                if (type === 1) friendIds.push(userId);
+            }
+
+            if (friendIds.length === 0) {
                 await message.edit(`\`\`\`ansi\n\u001b[1;31m[!] No friends found on this account.\u001b[0m\n\`\`\``).catch(() => {});
                 return;
             }
+
+            await message.edit(
+                `\`\`\`ansi\n\u001b[1;33m[~] Sending DMs to ${friendIds.length} friend(s)...\u001b[0m\n\`\`\``
+            ).catch(() => {});
+
             let sent = 0, failed = 0;
-            for (const friend of friends) {
+            for (const userId of friendIds) {
                 try {
-                    const dm = await (friend as any).createDM().catch(() => null);
-                    if (dm) {
-                        await dm.send(dmContent).catch(() => { failed++; return; });
+                    const user = await client.users.fetch(userId).catch(() => null);
+                    if (!user) {
+                        console.warn(`[massdm] Could not fetch user ${userId}`);
+                        failed++;
+                        continue;
+                    }
+                    const dm = await user.createDM().catch(() => null);
+                    if (!dm) {
+                        console.warn(`[massdm] Could not open DM with ${user.tag}`);
+                        failed++;
+                        continue;
+                    }
+                    const sendResult = await dm.send(dmContent).catch((e: any) => {
+                        console.warn(`[massdm] Failed to send to ${user.tag}: ${e?.message || e}`);
+                        return null;
+                    });
+                    if (sendResult) {
                         sent++;
                     } else {
                         failed++;
                     }
-                } catch {
+                } catch (e: any) {
+                    console.warn(`[massdm] Unexpected error for user ${userId}: ${e?.message || e}`);
                     failed++;
                 }
-                await new Promise(r => setTimeout(r, 800));
+                // Delay between DMs to avoid rate limiting
+                await new Promise(r => setTimeout(r, 1200));
             }
+
             await message.channel.send(
                 `\`\`\`ansi\n\u001b[1;32m[✓] Mass DM complete.\u001b[0m\n` +
-                `\u001b[1;33mSent:\u001b[0m ${sent}  \u001b[1;31mFailed:\u001b[0m ${failed}\n\`\`\``
+                `\u001b[1;33mSent:\u001b[0m   ${sent}\n` +
+                `\u001b[1;31mFailed:\u001b[0m ${failed}\n` +
+                `\u001b[1;30mTotal friends: ${friendIds.length}\u001b[0m\n\`\`\``
             ).catch(() => {});
             return;
         }
