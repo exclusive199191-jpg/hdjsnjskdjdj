@@ -1310,26 +1310,48 @@ export class BotManager {
     const rpcTypeStr = (config.rpcType?.toUpperCase() || "PLAYING");
     const rpcTypeNum = typeMap[rpcTypeStr] ?? 0;
 
+    // ── Progress bar / seek bar ────────────────────────────────────────────
+    // Values stored are seconds (start = elapsed position, end = total duration).
+    // We compute fixed absolute Unix ms timestamps ONCE so Discord's client
+    // naturally advances the seek bar in real time without us having to touch it.
+    const rawStart = config.rpcStartTimestamp?.trim();
+    const rawEnd   = config.rpcEndTimestamp?.trim();
+    const startSec = rawStart ? parseFloat(rawStart) : 0;
+    const endSec   = rawEnd   ? parseFloat(rawEnd)   : 0;
+
+    let fixedTimestamps: { start: number; end?: number } | null = null;
+    if (endSec > 0) {
+        const now = Date.now();
+        // absoluteStart = when the track "began" based on elapsed position
+        const absoluteStart = Math.floor(now - startSec * 1000);
+        // absoluteEnd   = when the track will finish
+        const absoluteEnd   = absoluteStart + Math.floor(endSec * 1000);
+        fixedTimestamps = { start: absoluteStart, end: absoluteEnd };
+        console.log(`[RPC] Seek bar for ${client.user.tag}: ${startSec}s / ${endSec}s → start=${absoluteStart} end=${absoluteEnd}`);
+    } else if (startSec > 0) {
+        // Only a start was given → show elapsed timer (no total / no bar)
+        const absoluteStart = Math.floor(Date.now() - startSec * 1000);
+        fixedTimestamps = { start: absoluteStart };
+    }
+
+    // Build the base activity object (used on every re-send)
     const rpc: any = {
         name: appName || "discord",
         type: rpcTypeNum,
     };
 
+    // Streaming requires a URL to show the progress bar
     if (rpcTypeNum === 1) {
         rpc.url = "https://www.twitch.tv/discord";
     }
 
     if (details && details.length >= 2) rpc.details = details;
-    if (state && state.length >= 2) rpc.state = state;
+    if (state  && state.length  >= 2) rpc.state   = state;
 
-    if (config.rpcStartTimestamp || config.rpcEndTimestamp) {
-        rpc.timestamps = {};
-        if (config.rpcStartTimestamp && config.rpcStartTimestamp !== "0" && config.rpcStartTimestamp !== "") {
-            rpc.timestamps.start = Number(config.rpcStartTimestamp);
-        }
-        if (config.rpcEndTimestamp && config.rpcEndTimestamp !== "0" && config.rpcEndTimestamp !== "") {
-            rpc.timestamps.end = Number(config.rpcEndTimestamp);
-        }
+    // Attach fixed timestamps — same object every re-send so the bar moves
+    // naturally (Discord uses wall clock vs these fixed anchors)
+    if (fixedTimestamps) {
+        rpc.timestamps = fixedTimestamps;
     }
 
     if (config.rpcImage) {

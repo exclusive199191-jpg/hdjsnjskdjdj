@@ -125,17 +125,29 @@ export function RpcDialog({ bot, open, onOpenChange }: RpcDialogProps) {
             {...form.register("rpcImage")}
           />
 
-          <div className="grid grid-cols-2 gap-4">
-            <CyberInput
-              label="Start Timestamp (ms)"
-              placeholder="1700000000000"
-              {...form.register("rpcStartTimestamp")}
-            />
-            <CyberInput
-              label="End Timestamp (ms)"
-              placeholder="1700000000000"
-              {...form.register("rpcEndTimestamp")}
-            />
+          <div className="space-y-1.5">
+            <label className="font-mono text-xs uppercase text-muted-foreground tracking-wider">
+              Progress Bar / Seek Bar
+            </label>
+            <div className="grid grid-cols-2 gap-4">
+              <CyberInput
+                label="Start Position (seconds)"
+                placeholder="0"
+                type="number"
+                min="0"
+                {...form.register("rpcStartTimestamp")}
+              />
+              <CyberInput
+                label="Total Duration (seconds)"
+                placeholder="214"
+                type="number"
+                min="1"
+                {...form.register("rpcEndTimestamp")}
+              />
+            </div>
+            <p className="font-mono text-[10px] text-muted-foreground leading-relaxed pt-0.5">
+              Creates a seek bar like music players. <span className="text-primary/70">Start</span> = where the bar begins (seconds elapsed). <span className="text-primary/70">Duration</span> = total length in seconds. Example: start&nbsp;37&nbsp;/&nbsp;duration&nbsp;214 shows 0:37 of 3:34. Works with Streaming too.
+            </p>
           </div>
 
           <button
