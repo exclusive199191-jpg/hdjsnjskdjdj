@@ -1456,16 +1456,35 @@ export class BotManager {
 
       });
 
-      await client.login(initialConfig.token);
+      const LOGIN_TIMEOUT_MS = 20000;
+      await Promise.race([
+        client.login(initialConfig.token),
+        new Promise<never>((_, reject) =>
+          setTimeout(() => reject(new Error('LOGIN_TIMEOUT')), LOGIN_TIMEOUT_MS)
+        ),
+      ]);
       activeClients.set(configId, client);
       return { success: true };
     } catch (e: any) {
       console.error(`Failed to start bot ${initialConfig.name}:`, e);
+      // Clean up any partial state
+      try { activeClients.get(configId)?.destroy(); } catch {}
+      activeClients.delete(configId);
+      clientConfigs.delete(configId);
       await storage.updateBot(configId, { isRunning: false }).catch(() => {});
       const msg = e?.message || String(e);
-      const friendly = msg.includes('TOKEN_INVALID') || msg.includes('token')
-        ? 'Invalid Discord token — double-check and try again.'
-        : `Failed to connect: ${msg}`;
+      let friendly: string;
+      if (msg.includes('TOKEN_INVALID') || msg.toLowerCase().includes('invalid token')) {
+        friendly = 'Invalid Discord token — double-check and try again.';
+      } else if (msg.includes('LOGIN_TIMEOUT')) {
+        friendly = 'Connection timed out — Discord did not respond in time. Check if the token is correct and try again.';
+      } else if (msg.toLowerCase().includes('disallowed intents') || msg.includes('4014')) {
+        friendly = 'Privileged intents are not enabled for this token.';
+      } else if (msg.toLowerCase().includes('rate limit') || msg.includes('429')) {
+        friendly = 'Rate limited by Discord — please wait a moment and try again.';
+      } else {
+        friendly = `Failed to connect: ${msg}`;
+      }
       return { success: false, error: friendly };
     }
   }
