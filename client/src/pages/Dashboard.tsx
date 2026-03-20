@@ -2,6 +2,7 @@ import { useBots, useDeleteBot, useBotAction } from "@/hooks/use-bots";
 import { CreateBotDialog } from "@/components/CreateBotDialog";
 import { BotStatusBadge } from "@/components/BotStatusBadge";
 import { RpcDialog } from "@/components/RpcDialog";
+import { ThemeCustomizer } from "@/components/ThemeCustomizer";
 import { Loader2, Settings, Power, Trash2, Search, Zap, Bot, Shield } from "lucide-react";
 import { Link } from "wouter";
 import { motion } from "framer-motion";
@@ -46,12 +47,15 @@ export default function Dashboard() {
             <span className="font-display font-black text-base sm:text-lg tracking-tight text-white">bothost.host</span>
           </div>
 
-          <Link href="/admin">
-            <button className="flex items-center gap-1.5 sm:gap-2 px-3 py-2 rounded-lg border border-white/10 text-muted-foreground hover:text-white hover:border-primary/30 hover:bg-primary/5 transition-colors text-xs font-mono">
-              <Shield className="w-3.5 h-3.5" />
-              <span>Admin</span>
-            </button>
-          </Link>
+          <div className="flex items-center gap-2">
+            <ThemeCustomizer />
+            <Link href="/admin">
+              <button className="flex items-center gap-1.5 sm:gap-2 px-3 py-2 rounded-lg border border-white/10 text-muted-foreground hover:text-white hover:border-primary/30 hover:bg-primary/5 transition-colors text-xs font-mono">
+                <Shield className="w-3.5 h-3.5" />
+                <span>Admin</span>
+              </button>
+            </Link>
+          </div>
         </div>
       </header>
 

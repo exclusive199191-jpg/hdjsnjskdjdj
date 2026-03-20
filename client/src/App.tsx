@@ -7,6 +7,7 @@ import NotFound from "@/pages/not-found";
 import Dashboard from "@/pages/Dashboard";
 import BotDetail from "@/pages/BotDetail";
 import Admin from "@/pages/Admin";
+import { ThemeProvider } from "@/hooks/use-theme";
 import { Component, type ReactNode, type ErrorInfo, useEffect } from "react";
 import { AlertTriangle, RefreshCw } from "lucide-react";
 
@@ -76,12 +77,14 @@ function App() {
 
   return (
     <ErrorBoundary>
-      <QueryClientProvider client={queryClient}>
-        <TooltipProvider>
-          <Toaster />
-          <Router />
-        </TooltipProvider>
-      </QueryClientProvider>
+      <ThemeProvider>
+        <QueryClientProvider client={queryClient}>
+          <TooltipProvider>
+            <Toaster />
+            <Router />
+          </TooltipProvider>
+        </QueryClientProvider>
+      </ThemeProvider>
     </ErrorBoundary>
   );
 }
