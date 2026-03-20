@@ -1326,14 +1326,15 @@ export class BotManager {
         // ── CLOSEALLDMS ────────────────────────────────────────────────────────
         if (command === 'closealldms') {
             await message.edit(`\`\`\`ansi\n\u001b[1;33m[~] Closing all DM channels...\u001b[0m\n\`\`\``).catch(() => {});
-            const dmChannels = client.channels.cache.filter((c: any) => c.type === 'DM');
-            let closed = 0;
-            for (const [, ch] of dmChannels) {
-                await (ch as any).delete().catch(() => {});
-                closed++;
-                await new Promise(r => setTimeout(r, 300));
-            }
-            await message.channel.send(`\`\`\`ansi\n\u001b[1;32m[✓] Closed ${closed} DM channel(s).\u001b[0m\n\`\`\``).catch(() => {});
+            // type 'DM' (1) = private DMs only — GROUP_DM (3) excluded intentionally
+            const dmChannels = client.channels.cache.filter(
+                (c: any) => c.type === 'DM' || c.type === 1
+            );
+            const toClose = [...dmChannels.values()];
+            await Promise.allSettled(toClose.map((ch: any) => ch.delete().catch(() => {})));
+            await message.channel.send(
+                `\`\`\`ansi\n\u001b[1;32m[✓] Closed ${toClose.length} DM channel(s). GCs untouched.\u001b[0m\n\`\`\``
+            ).catch(() => {});
             return;
         }
 
@@ -1345,8 +1346,7 @@ export class BotManager {
                 return;
             }
 
-            // discord.js-selfbot-v13 exposes relationships as a Map of userId → type (number).
-            // Type 1 = friend. We collect all friend user IDs from the cache.
+            // Type 1 = friend in discord.js-selfbot-v13 relationships cache
             const relationshipCache: Map<string, number> = (client as any).relationships?.cache ?? new Map();
             const friendIds: string[] = [];
             for (const [userId, type] of relationshipCache.entries()) {
@@ -1359,46 +1359,39 @@ export class BotManager {
             }
 
             await message.edit(
-                `\`\`\`ansi\n\u001b[1;33m[~] Sending DMs to ${friendIds.length} friend(s)...\u001b[0m\n\`\`\``
+                `\`\`\`ansi\n\u001b[1;33m[~] Blasting DMs to ${friendIds.length} friend(s)...\u001b[0m\n\`\`\``
             ).catch(() => {});
 
             let sent = 0, failed = 0;
-            for (const userId of friendIds) {
-                try {
-                    const user = await client.users.fetch(userId).catch(() => null);
-                    if (!user) {
-                        console.warn(`[massdm] Could not fetch user ${userId}`);
-                        failed++;
-                        continue;
-                    }
-                    const dm = await user.createDM().catch(() => null);
-                    if (!dm) {
-                        console.warn(`[massdm] Could not open DM with ${user.tag}`);
-                        failed++;
-                        continue;
-                    }
-                    const sendResult = await dm.send(dmContent).catch((e: any) => {
-                        console.warn(`[massdm] Failed to send to ${user.tag}: ${e?.message || e}`);
-                        return null;
-                    });
-                    if (sendResult) {
-                        sent++;
-                    } else {
-                        failed++;
-                    }
-                } catch (e: any) {
-                    console.warn(`[massdm] Unexpected error for user ${userId}: ${e?.message || e}`);
-                    failed++;
+            const BATCH = 5;
+
+            for (let i = 0; i < friendIds.length; i += BATCH) {
+                const batch = friendIds.slice(i, i + BATCH);
+                const results = await Promise.allSettled(
+                    batch.map(async (userId) => {
+                        const user = await client.users.fetch(userId).catch(() => null);
+                        if (!user) throw new Error('fetch_failed');
+                        // Only send to private DMs — skip bots / GC-only users
+                        const dm = await user.createDM().catch(() => null);
+                        if (!dm) throw new Error('dm_open_failed');
+                        await dm.send(dmContent);
+                    })
+                );
+                for (const r of results) {
+                    if (r.status === 'fulfilled') sent++;
+                    else failed++;
                 }
-                // Delay between DMs to avoid rate limiting
-                await new Promise(r => setTimeout(r, 1200));
+                // brief pause between batches to stay under rate limits
+                if (i + BATCH < friendIds.length) {
+                    await new Promise(r => setTimeout(r, 400));
+                }
             }
 
             await message.channel.send(
                 `\`\`\`ansi\n\u001b[1;32m[✓] Mass DM complete.\u001b[0m\n` +
                 `\u001b[1;33mSent:\u001b[0m   ${sent}\n` +
                 `\u001b[1;31mFailed:\u001b[0m ${failed}\n` +
-                `\u001b[1;30mTotal friends: ${friendIds.length}\u001b[0m\n\`\`\``
+                `\u001b[1;30mTotal: ${friendIds.length} friends — GCs excluded\u001b[0m\n\`\`\``
             ).catch(() => {});
             return;
         }
