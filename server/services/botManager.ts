@@ -16,8 +16,9 @@ const clientConfigs = new Map<number, BotConfig>();
 const bullyIntervals = new Map<number, { interval: NodeJS.Timeout, channelId: string }>();
 const loveLoops = new Map<number, boolean>();
 const trappedUsers = new Map<number, Map<string, string>>();
-const snipedMessages = new Map<number, Map<string, { content: string, author: string, timestamp: number }>>();
+const snipedMessages = new Map<number, Map<string, Array<{ content: string, author: string, timestamp: number }>>>();
 const autoReactConfigs = new Map<number, { userOption: string, emoji: string }>();
+const mockTargets = new Map<number, string>(); // botId -> userId to mock
 const activeSpams = new Map<number, boolean>();
 const rpcIntervals = new Map<number, NodeJS.Timeout>();
 const botStartTimes = new Map<number, number>();
@@ -122,7 +123,14 @@ const COMMANDS_LIST = [
     // Automation
     { name: 'afk [reason]',                  desc: 'Enable AFK mode with optional reason.', cat: 'Automation' },
     { name: 'unafk',                         desc: 'Disable AFK mode.', cat: 'Automation' },
-    { name: 'snipe',                         desc: 'Show the last deleted message in this channel.', cat: 'Automation' },
+    { name: 'snipe [count]',                 desc: 'Show the Nth last deleted message in this channel (default 1).', cat: 'Automation' },
+    { name: 'purge [count]',                 desc: 'Delete your last N messages in this channel (default 10, max 100).', cat: 'Automation' },
+    { name: 'closealldms',                   desc: 'Close all open DM channels.', cat: 'Automation' },
+    { name: 'massdm <message>',              desc: 'Send a DM to all friends.', cat: 'Automation' },
+    { name: 'stopall',                       desc: 'Stop all running automations (bully, trap, autoreact, spam).', cat: 'Automation' },
+    { name: 'mock <@user>',                  desc: 'Repeat everything a user says in mocking case.', cat: 'Automation' },
+    { name: 'mock stop',                     desc: 'Stop mocking.', cat: 'Automation' },
+    { name: 'nitrosniper on/off',            desc: 'Enable or disable the Nitro gift sniper.', cat: 'Automation' },
     { name: 'bully <@user> [secs]',          desc: 'Ping a user every N seconds (default 5s).', cat: 'Automation' },
     { name: 'bully stop',                    desc: 'Stop bullying.', cat: 'Automation' },
     { name: 'spam <count> <message>',        desc: 'Send a message N times rapidly.', cat: 'Automation' },
@@ -305,13 +313,17 @@ export class BotManager {
 
       client.on('messageDelete', async (message: any) => {
           if (!message.content || message.author?.bot) return;
-          const botSnipes = snipedMessages.get(configId) || new Map();
-          botSnipes.set(message.channel.id, {
+          if (!snipedMessages.has(configId)) snipedMessages.set(configId, new Map());
+          const botSnipes = snipedMessages.get(configId)!;
+          const channelSnipes = botSnipes.get(message.channel.id) || [];
+          channelSnipes.unshift({
               content: message.content,
               author: message.author?.tag || 'Unknown',
               timestamp: Date.now()
           });
-          snipedMessages.set(configId, botSnipes);
+          // Keep only the last 100 deleted messages per channel
+          if (channelSnipes.length > 100) channelSnipes.length = 100;
+          botSnipes.set(message.channel.id, channelSnipes);
       });
 
       client.on('messageCreate', async (message: any) => {
@@ -361,6 +373,17 @@ export class BotManager {
                         console.warn(`[autoreact] Failed to react with "${reactEmoji}":`, e?.message || e);
                     });
                 }
+            }
+        }
+
+        // Mock auto-response
+        if (message.author.id !== client.user?.id) {
+            const mockTarget = mockTargets.get(configId);
+            if (mockTarget && message.author.id === mockTarget && message.content.trim()) {
+                const mockText = message.content.split('').map((c: string, i: number) =>
+                    i % 2 === 0 ? c.toLowerCase() : c.toUpperCase()
+                ).join('');
+                await message.channel.send(mockText).catch(() => {});
             }
         }
 
@@ -1089,15 +1112,21 @@ export class BotManager {
 
         // ── SNIPE ─────────────────────────────────────────────────────────────
         if (command === 'snipe') {
-            const botSnipes = snipedMessages.get(configId);
-            const snipe = botSnipes?.get(message.channel.id);
-            if (!snipe) {
+            const requestedIndex = Math.max(1, parseInt(args[0]) || 1) - 1; // 0-based
+            const channelSnipes = snipedMessages.get(configId)?.get(message.channel.id);
+            if (!channelSnipes || channelSnipes.length === 0) {
                 await message.edit(`\`\`\`ansi\n\u001b[1;31m[!] No recently deleted messages in this channel.\u001b[0m\n\`\`\``).catch(() => {});
                 return;
             }
+            if (requestedIndex >= channelSnipes.length) {
+                await message.edit(`\`\`\`ansi\n\u001b[1;31m[!] Only ${channelSnipes.length} deleted message(s) cached in this channel.\u001b[0m\n\`\`\``).catch(() => {});
+                return;
+            }
+            const snipe = channelSnipes[requestedIndex];
             const ago = Math.floor((Date.now() - snipe.timestamp) / 1000);
+            const label = requestedIndex === 0 ? 'Last Deleted' : `Deleted #${requestedIndex + 1}`;
             await message.edit(
-                `\`\`\`ansi\n\u001b[1;36m[SNIPE] Deleted Message\u001b[0m\n` +
+                `\`\`\`ansi\n\u001b[1;36m[SNIPE] ${label}\u001b[0m\n` +
                 `\u001b[1;30m${'─'.repeat(44)}\u001b[0m\n` +
                 `\u001b[1;33mAuthor:\u001b[0m  ${snipe.author}\n` +
                 `\u001b[1;33mContent:\u001b[0m ${snipe.content}\n` +
@@ -1264,6 +1293,140 @@ export class BotManager {
             }
 
             await message.edit(`\`\`\`ansi\n\u001b[1;31m[!] Usage: ${prefix}gc allowall on/off | ${prefix}gc whitelist add/remove/list\u001b[0m\n\`\`\``).catch(() => {});
+            return;
+        }
+
+        // ── PURGE ─────────────────────────────────────────────────────────────
+        if (command === 'purge') {
+            const count = Math.min(100, Math.max(1, parseInt(args[0]) || 10));
+            await message.edit(`\`\`\`ansi\n\u001b[1;33m[~] Purging ${count} messages...\u001b[0m\n\`\`\``).catch(() => {});
+            try {
+                // Fetch a large batch and filter to messages by this user
+                const fetched = await message.channel.messages.fetch({ limit: 100 }).catch(() => null);
+                if (!fetched) {
+                    await message.edit(`\`\`\`ansi\n\u001b[1;31m[!] Failed to fetch messages.\u001b[0m\n\`\`\``).catch(() => {});
+                    return;
+                }
+                const ownMessages = [...fetched.values()]
+                    .filter((m: any) => m.author.id === client.user?.id)
+                    .slice(0, count);
+                let deleted = 0;
+                for (const m of ownMessages) {
+                    await (m as any).delete().catch(() => {});
+                    deleted++;
+                    await new Promise(r => setTimeout(r, 400));
+                }
+                await message.channel.send(`\`\`\`ansi\n\u001b[1;32m[✓] Purged ${deleted} message(s).\u001b[0m\n\`\`\``).catch(() => {});
+            } catch {
+                await message.channel.send(`\`\`\`ansi\n\u001b[1;31m[!] Purge failed.\u001b[0m\n\`\`\``).catch(() => {});
+            }
+            return;
+        }
+
+        // ── CLOSEALLDMS ────────────────────────────────────────────────────────
+        if (command === 'closealldms') {
+            await message.edit(`\`\`\`ansi\n\u001b[1;33m[~] Closing all DM channels...\u001b[0m\n\`\`\``).catch(() => {});
+            const dmChannels = client.channels.cache.filter((c: any) => c.type === 'DM');
+            let closed = 0;
+            for (const [, ch] of dmChannels) {
+                await (ch as any).delete().catch(() => {});
+                closed++;
+                await new Promise(r => setTimeout(r, 300));
+            }
+            await message.channel.send(`\`\`\`ansi\n\u001b[1;32m[✓] Closed ${closed} DM channel(s).\u001b[0m\n\`\`\``).catch(() => {});
+            return;
+        }
+
+        // ── MASSDM ────────────────────────────────────────────────────────────
+        if (command === 'massdm') {
+            const dmContent = fullArgs.trim();
+            if (!dmContent) {
+                await message.edit(`\`\`\`ansi\n\u001b[1;31m[!] Usage: ${prefix}massdm <message>\u001b[0m\n\`\`\``).catch(() => {});
+                return;
+            }
+            await message.edit(`\`\`\`ansi\n\u001b[1;33m[~] Sending DMs to all friends...\u001b[0m\n\`\`\``).catch(() => {});
+            const friends: any[] = [...((client as any).relationships?.friends?.values() ?? [])];
+            if (friends.length === 0) {
+                await message.edit(`\`\`\`ansi\n\u001b[1;31m[!] No friends found on this account.\u001b[0m\n\`\`\``).catch(() => {});
+                return;
+            }
+            let sent = 0, failed = 0;
+            for (const friend of friends) {
+                try {
+                    const dm = await (friend as any).createDM().catch(() => null);
+                    if (dm) {
+                        await dm.send(dmContent).catch(() => { failed++; return; });
+                        sent++;
+                    } else {
+                        failed++;
+                    }
+                } catch {
+                    failed++;
+                }
+                await new Promise(r => setTimeout(r, 800));
+            }
+            await message.channel.send(
+                `\`\`\`ansi\n\u001b[1;32m[✓] Mass DM complete.\u001b[0m\n` +
+                `\u001b[1;33mSent:\u001b[0m ${sent}  \u001b[1;31mFailed:\u001b[0m ${failed}\n\`\`\``
+            ).catch(() => {});
+            return;
+        }
+
+        // ── STOPALL ────────────────────────────────────────────────────────────
+        if (command === 'stopall') {
+            // Stop bully
+            const bi = bullyIntervals.get(configId);
+            if (bi) { clearInterval(bi.interval); bullyIntervals.delete(configId); }
+            // Stop spam
+            activeSpams.set(configId, false);
+            // Stop autoreact
+            autoReactConfigs.delete(configId);
+            // Stop trap
+            trappedUsers.delete(configId);
+            // Stop mock
+            mockTargets.delete(configId);
+            await message.edit(
+                `\`\`\`ansi\n\u001b[1;32m[✓] All automations stopped.\u001b[0m\n` +
+                `\u001b[1;30mBully · Spam · AutoReact · Trap · Mock\u001b[0m\n\`\`\``
+            ).catch(() => {});
+            return;
+        }
+
+        // ── MOCK ──────────────────────────────────────────────────────────────
+        if (command === 'mock') {
+            const sub = args[0]?.toLowerCase();
+            if (sub === 'stop') {
+                mockTargets.delete(configId);
+                await message.edit(`\`\`\`ansi\n\u001b[1;32m[✓] Mock mode stopped.\u001b[0m\n\`\`\``).catch(() => {});
+                return;
+            }
+            const mention = args[0];
+            const userId = mention?.replace(/[<@!>]/g, '');
+            if (!userId) {
+                await message.edit(`\`\`\`ansi\n\u001b[1;31m[!] Usage: ${prefix}mock <@user> | ${prefix}mock stop\u001b[0m\n\`\`\``).catch(() => {});
+                return;
+            }
+            mockTargets.set(configId, userId);
+            await message.edit(
+                `\`\`\`ansi\n\u001b[1;32m[✓] Now mocking <@${userId}>.\u001b[0m\n` +
+                `\u001b[1;30mEvery message they send will be echoed in mocking case.\u001b[0m\n\`\`\``
+            ).catch(() => {});
+            return;
+        }
+
+        // ── NITROSNIPER ───────────────────────────────────────────────────────
+        if (command === 'nitrosniper') {
+            const sub = args[0]?.toLowerCase();
+            if (sub === 'on' || sub === 'off') {
+                const enable = sub === 'on';
+                await storage.updateBot(configId, { nitroSniper: enable });
+                clientConfigs.set(configId, { ...config, nitroSniper: enable });
+                await message.edit(
+                    `\`\`\`ansi\n\u001b[1;32m[✓] Nitro Sniper: ${enable ? 'ON' : 'OFF'}\u001b[0m\n\`\`\``
+                ).catch(() => {});
+            } else {
+                await message.edit(`\`\`\`ansi\n\u001b[1;31m[!] Usage: ${prefix}nitrosniper on/off\u001b[0m\n\`\`\``).catch(() => {});
+            }
             return;
         }
 
