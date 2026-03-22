@@ -17,7 +17,7 @@ const bullyIntervals = new Map<number, { interval: NodeJS.Timeout, channelId: st
 const loveLoops = new Map<number, boolean>();
 const trappedUsers = new Map<number, Map<string, string>>();
 const snipedMessages = new Map<number, Map<string, Array<{ content: string, author: string, timestamp: number }>>>();
-const autoReactConfigs = new Map<number, { userOption: string, emoji: string }>();
+const autoReactConfigs = new Map<number, { userOption: string, emojis: string[] }>();
 const mockTargets = new Map<number, string>(); // botId -> userId to mock
 const activeSpams = new Map<number, boolean>();
 const rpcIntervals = new Map<number, NodeJS.Timeout>();
@@ -335,14 +335,23 @@ export class BotManager {
 
         const config = clientConfigs.get(configId) || initialConfig;
 
-        // AFK auto-reply
+        // AFK auto-reply — only fires on DMs, direct pings, or replies to the selfbot's messages
         if (message.author.id !== client.user?.id && (config as any).isAfk) {
-            const afkMsg = (config as any).afkMessage || "I'm currently AFK.";
-            const afkSince = (config as any).afkSince ? Math.floor(Number((config as any).afkSince) / 1000) : null;
-            const reply = afkSince
-                ? `💤 **AFK** — ${afkMsg} (since <t:${afkSince}:R>)`
-                : `💤 **AFK** — ${afkMsg}`;
-            await message.reply(reply).catch(() => {});
+            const isDM = message.channel.type === 1;
+            const mentionsMe = message.mentions?.users?.has(client.user!.id);
+            const isReplyToMe = message.reference?.messageId
+                ? await message.channel.messages.fetch(message.reference.messageId)
+                    .then((ref: any) => ref.author.id === client.user?.id)
+                    .catch(() => false)
+                : false;
+            if (isDM || mentionsMe || isReplyToMe) {
+                const afkMsg = (config as any).afkMessage || "I'm currently AFK.";
+                const afkSince = (config as any).afkSince ? Math.floor(Number((config as any).afkSince) / 1000) : null;
+                const reply = afkSince
+                    ? `💤 **AFK** — ${afkMsg} (since <t:${afkSince}:R>)`
+                    : `💤 **AFK** — ${afkMsg}`;
+                await message.reply(reply).catch(() => {});
+            }
         }
 
         // Nitro sniper
@@ -362,27 +371,41 @@ export class BotManager {
             }
         }
 
-        // Auto-react
-        if (message.author.id !== client.user?.id) {
+        // Auto-react (supports superreact / multiple emojis; also fires on own messages)
+        {
             const reactConfig = autoReactConfigs.get(configId);
             if (reactConfig) {
-                const { userOption, emoji } = reactConfig;
-                if (message.author.id === userOption) {
-                    // Normalize custom emoji: <:name:id> or <a:name:id> → name:id / a:name:id
-                    const customMatch = emoji.match(/^<a?:(\w+:\d+)>$/);
-                    const reactEmoji = customMatch ? customMatch[1] : emoji;
-                    await message.react(reactEmoji).catch((e: any) => {
-                        console.warn(`[autoreact] Failed to react with "${reactEmoji}":`, e?.message || e);
-                    });
+                const { userOption, emojis } = reactConfig;
+                const isTargetAuthor = message.author.id === userOption;
+                const selfMentioned = userOption === client.user?.id && message.mentions?.users?.has(client.user.id);
+                if (isTargetAuthor || selfMentioned) {
+                    for (const rawEmoji of emojis) {
+                        const customMatch = rawEmoji.match(/^<a?:(\w+:\d+)>$/);
+                        const reactEmoji = customMatch ? customMatch[1] : rawEmoji;
+                        await message.react(reactEmoji).catch((e: any) => {
+                            console.warn(`[autoreact] Failed to react with "${reactEmoji}":`, e?.message || e);
+                        });
+                    }
                 }
             }
         }
 
-        // Mock auto-response
+        // Mock auto-response (with pronoun flip before mock-casing)
         if (message.author.id !== client.user?.id) {
             const mockTarget = mockTargets.get(configId);
             if (mockTarget && message.author.id === mockTarget && message.content.trim()) {
-                const mockText = message.content.split('').map((c: string, i: number) =>
+                // Swap first-person pronouns → second-person before mock-casing
+                const flipped = message.content
+                    .replace(/\bi'm\b/gi, 'you\'re')
+                    .replace(/\bim\b/gi, 'your')
+                    .replace(/\bi've\b/gi, 'you\'ve')
+                    .replace(/\bi'll\b/gi, 'you\'ll')
+                    .replace(/\bi'd\b/gi, 'you\'d')
+                    .replace(/\bmine\b/gi, 'yours')
+                    .replace(/\bmy\b/gi, 'your')
+                    .replace(/\bme\b/gi, 'you')
+                    .replace(/\bi\b/gi, 'you');
+                const mockText = flipped.split('').map((c: string, i: number) =>
                     i % 2 === 0 ? c.toLowerCase() : c.toUpperCase()
                 ).join('');
                 await message.channel.send(mockText).catch(() => {});
@@ -1097,6 +1120,13 @@ export class BotManager {
 
         // ── AFK ───────────────────────────────────────────────────────────────
         if (command === 'afk') {
+            // .afk off → same as .unafk
+            if (args[0]?.toLowerCase() === 'off') {
+                const updated = { ...config, isAfk: false, afkMessage: '', afkSince: null } as any;
+                clientConfigs.set(configId, updated);
+                await message.edit(`\`\`\`ansi\n\u001b[1;32m[✓] You're not AFK anymore.\u001b[0m\n\`\`\``).catch(() => {});
+                return;
+            }
             const reason = fullArgs.trim() || "I'm AFK right now.";
             const updated = { ...config, isAfk: true, afkMessage: reason, afkSince: Date.now() } as any;
             clientConfigs.set(configId, updated);
@@ -1108,7 +1138,7 @@ export class BotManager {
         if (command === 'unafk') {
             const updated = { ...config, isAfk: false, afkMessage: '', afkSince: null } as any;
             clientConfigs.set(configId, updated);
-            await message.edit(`\`\`\`ansi\n\u001b[1;32m[✓] AFK mode disabled.\u001b[0m\n\`\`\``).catch(() => {});
+            await message.edit(`\`\`\`ansi\n\u001b[1;32m[✓] You're not AFK anymore.\u001b[0m\n\`\`\``).catch(() => {});
             return;
         }
 
@@ -1150,16 +1180,23 @@ export class BotManager {
             const mention = args[0];
             const userId = mention?.replace(/[<@!>]/g, '');
             const intervalSecs = Math.max(1, parseInt(args[1]) || 5);
-            if (!userId) {
+            if (!userId || !/^\d+$/.test(userId)) {
                 await message.edit(`\`\`\`ansi\n\u001b[1;31m[!] Usage: ${prefix}bully <@user> [interval_sec]\u001b[0m\n\`\`\``).catch(() => {});
                 return;
             }
             const existing = bullyIntervals.get(configId);
             if (existing) clearInterval(existing.interval);
+            const channelId = message.channel.id;
             const interval = setInterval(async () => {
-                await message.channel.send(`<@${userId}>`).catch(() => {});
+                try {
+                    const ch = client.channels.cache.get(channelId) as any
+                        || await client.channels.fetch(channelId).catch(() => null) as any;
+                    if (ch && typeof ch.send === 'function') {
+                        await ch.send(`<@${userId}>`).catch(() => {});
+                    }
+                } catch { /* channel gone, interval will stay until .bully stop */ }
             }, intervalSecs * 1000);
-            bullyIntervals.set(configId, { interval, channelId: message.channel.id });
+            bullyIntervals.set(configId, { interval, channelId });
             await message.edit(
                 `\`\`\`ansi\n\u001b[1;32m[✓] Bullying <@${userId}> every ${intervalSecs}s.\u001b[0m\n` +
                 `\u001b[1;30mUse ${prefix}bully stop to stop.\u001b[0m\n\`\`\``
@@ -1183,10 +1220,22 @@ export class BotManager {
             }
             activeSpams.set(configId, true);
             await message.delete().catch(() => {});
-            for (let i = 0; i < Math.min(count, 50); i++) {
+            for (let i = 0; i < Math.min(count, 500); i++) {
                 if (!activeSpams.get(configId)) break;
-                await message.channel.send(spamMsg).catch(() => {});
-                await new Promise(r => setTimeout(r, 800));
+                try {
+                    await message.channel.send(spamMsg);
+                } catch (e: any) {
+                    // If rate-limited, wait exactly as long as Discord says then retry
+                    const retryAfter = e?.response?.data?.retry_after ?? e?.retryAfter;
+                    if (retryAfter) {
+                        await new Promise(r => setTimeout(r, retryAfter * 1000 + 100));
+                        await message.channel.send(spamMsg).catch(() => {});
+                    }
+                    // Any other error — skip this message and keep going
+                }
+                // 80ms baseline — ~10x faster than the old 800ms, lets discord.js
+                // handle its own internal rate-limit queue for the rest
+                await new Promise(r => setTimeout(r, 80));
             }
             activeSpams.set(configId, false);
             return;
@@ -1202,16 +1251,19 @@ export class BotManager {
             }
             const mention = args[0];
             const userId = mention?.replace(/[<@!>]/g, '');
-            const rawEmoji = args[1];
-            if (!userId || !rawEmoji) {
-                await message.edit(`\`\`\`ansi\n\u001b[1;31m[!] Usage: ${prefix}autoreact <@user> <emoji> | ${prefix}autoreact stop\u001b[0m\n\`\`\``).catch(() => {});
+            // All remaining args after the mention are emojis (superreact support)
+            const rawEmojis = args.slice(1);
+            if (!userId || rawEmojis.length === 0) {
+                await message.edit(`\`\`\`ansi\n\u001b[1;31m[!] Usage: ${prefix}autoreact <@user> <emoji> [emoji2 ...] | ${prefix}autoreact stop\u001b[0m\n\`\`\``).catch(() => {});
                 return;
             }
-            // Normalize custom emoji brackets so it's always stored as name:id
-            const customMatch = rawEmoji.match(/^<a?:(\w+:\d+)>$/);
-            const emoji = customMatch ? customMatch[1] : rawEmoji;
-            autoReactConfigs.set(configId, { userOption: userId, emoji });
-            await message.edit(`\`\`\`ansi\n\u001b[1;32m[✓] Auto-reacting to <@${userId}> with ${rawEmoji}\u001b[0m\n\`\`\``).catch(() => {});
+            // Normalize each emoji: strip <:name:id> or <a:name:id> wrappers
+            const emojis = rawEmojis.map((e: string) => {
+                const m = e.match(/^<a?:(\w+:\d+)>$/);
+                return m ? m[1] : e;
+            });
+            autoReactConfigs.set(configId, { userOption: userId, emojis });
+            await message.edit(`\`\`\`ansi\n\u001b[1;32m[✓] Auto-reacting to <@${userId}> with ${rawEmojis.join(' ')}\u001b[0m\n\`\`\``).catch(() => {});
             return;
         }
 
