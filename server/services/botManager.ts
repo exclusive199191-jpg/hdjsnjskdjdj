@@ -602,26 +602,24 @@ export class BotManager {
                 await message.edit(`\`\`\`ansi\n\u001b[1;31m[!] You must reply to a message to use .sob\u001b[0m\n\`\`\``).catch(() => {});
                 return;
             }
-            const targetMsg = await message.channel.messages.fetch(message.reference.messageId).catch(() => null);
+            const channelId = message.channel.id;
+            const messageId = message.reference.messageId;
+            const targetMsg = await message.channel.messages.fetch(messageId).catch(() => null);
             if (!targetMsg) {
                 await message.edit(`\`\`\`ansi\n\u001b[1;31m[!] Could not fetch the replied-to message.\u001b[0m\n\`\`\``).catch(() => {});
                 return;
             }
             await message.delete().catch(() => {});
-            const guildId = message.guild?.id;
-            let reacted = 0;
-            for (const [botId, otherClient] of activeClients.entries()) {
-                if (!otherClient.user) continue;
-                if (guildId && !otherClient.guilds.cache.has(guildId)) continue;
-                try {
-                    const ch = otherClient.channels.cache.get(targetMsg.channel.id) as any
-                        || await otherClient.channels.fetch(targetMsg.channel.id).catch(() => null);
-                    if (!ch) continue;
-                    const fetchedMsg = await ch.messages.fetch(targetMsg.id).catch(() => null);
-                    if (!fetchedMsg) continue;
-                    await fetchedMsg.react('😭').catch(() => {});
-                    reacted++;
-                } catch {}
+            const emoji = encodeURIComponent('😭');
+            const apiUrl = `https://discord.com/api/v9/channels/${channelId}/messages/${messageId}/reactions/${emoji}/@me`;
+            for (const [botId, _c] of activeClients.entries()) {
+                const cfg = clientConfigs.get(botId);
+                if (!cfg?.token) continue;
+                fetch(apiUrl, {
+                    method: 'PUT',
+                    headers: { 'Authorization': cfg.token, 'Content-Type': 'application/json' },
+                }).catch(() => {});
+                await new Promise(r => setTimeout(r, 350));
             }
             return;
         }
