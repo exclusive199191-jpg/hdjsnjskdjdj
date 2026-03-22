@@ -1464,42 +1464,127 @@ export class BotManager {
             const guildId = args[1];
             if (sub === 'server' && guildId) {
                 await message.edit(
-                    `\`\`\`ansi\n\u001b[1;33m[~] Reporting server ${guildId} — sending 20 reports...\u001b[0m\n\`\`\``
+                    `\`\`\`ansi\n\u001b[1;33m[~] Reporting server ${guildId} — fetching report menu...\u001b[0m\n\`\`\``
                 ).catch(() => {});
+
                 const token = (client as any).token;
+                const reportHeaders: Record<string, string> = {
+                    'Authorization': token,
+                    'Content-Type': 'application/json',
+                    'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+                    'X-Discord-Locale': 'en-US',
+                    'X-Discord-Timezone': 'America/New_York',
+                };
+
+                // ── Step 1: fetch guild report menu to get correct node IDs ──
+                let breadcrumbs: number[] = [];
+                let menuVariant = '3';
+
+                try {
+                    const menuRes = await fetch('https://discord.com/api/v9/reporting/menu/guild', {
+                        headers: reportHeaders,
+                    });
+                    if (menuRes.ok) {
+                        const menu = await menuRes.json() as any;
+                        menuVariant = String(menu.variant || '3');
+                        const nodes: Record<number, any> = menu.nodes || {};
+                        const rootId: number = menu.root_node_id;
+
+                        // Walk the node tree, preferring harassment/bullying children
+                        const walkToHarassment = (): number[] => {
+                            const path: number[] = [];
+                            let currentId: number = rootId;
+                            for (let depth = 0; depth < 15; depth++) {
+                                const node = nodes[currentId];
+                                if (!node) break;
+                                path.push(currentId);
+                                if (node.button?.type === 'submit' || node.is_auto_submit) break;
+                                const children: Array<{ name: string; target_node_id: number }> =
+                                    node.children || [];
+                                if (children.length === 0) break;
+                                // Prefer harassment / bullying option
+                                const targeted = children.find((c) => {
+                                    const n = (c.name || '').toLowerCase();
+                                    return (
+                                        n.includes('harass') ||
+                                        n.includes('bully') ||
+                                        n.includes('abuse') ||
+                                        n.includes('threat')
+                                    );
+                                });
+                                currentId = targeted
+                                    ? targeted.target_node_id
+                                    : children[0].target_node_id;
+                            }
+                            return path;
+                        };
+
+                        breadcrumbs = walkToHarassment();
+                    }
+                } catch { /* menu fetch failed — will fallback below */ }
+
+                await message.edit(
+                    `\`\`\`ansi\n\u001b[1;33m[~] Sending 20 reports for server ${guildId}...\u001b[0m\n\`\`\``
+                ).catch(() => {});
+
+                // ── Step 2: send 20 reports ──────────────────────────────────
                 let success = 0;
                 let failed = 0;
+
                 for (let i = 0; i < 20; i++) {
-                    try {
-                        const res = await fetch('https://discord.com/api/v9/report', {
-                            method: 'POST',
-                            headers: {
-                                'Authorization': token,
-                                'Content-Type': 'application/json',
-                                'User-Agent': 'Mozilla/5.0',
-                            },
-                            body: JSON.stringify({
-                                guild_id: guildId,
-                                channel_id: null,
-                                message_id: null,
-                                breadcrumbs: [
-                                    { question_id: '1', response_id: '2' },
-                                    { question_id: '2', response_id: '8' },
-                                ],
-                            }),
-                        });
-                        if (res.ok || res.status === 201 || res.status === 204) {
-                            success++;
-                        } else {
+                    let sent = false;
+
+                    // Try V3 (in-app reports) first — most effective
+                    if (breadcrumbs.length > 0) {
+                        try {
+                            const v3Res = await fetch('https://discord.com/api/v9/reporting/guild', {
+                                method: 'POST',
+                                headers: reportHeaders,
+                                body: JSON.stringify({
+                                    version: '1.0',
+                                    variant: menuVariant,
+                                    name: 'guild',
+                                    language: 'en',
+                                    breadcrumbs,
+                                    guild_id: guildId,
+                                }),
+                            });
+                            if (v3Res.status === 201 || v3Res.ok) {
+                                success++;
+                                sent = true;
+                            }
+                        } catch { /* fall through to V1 */ }
+                    }
+
+                    // Fallback: V1 report with reason 2 (Harassment)
+                    if (!sent) {
+                        try {
+                            const v1Res = await fetch('https://discord.com/api/v9/report', {
+                                method: 'POST',
+                                headers: reportHeaders,
+                                body: JSON.stringify({
+                                    guild_id: guildId,
+                                    channel_id: null,
+                                    message_id: null,
+                                    reason: 2,
+                                }),
+                            });
+                            if (v1Res.ok || v1Res.status === 201 || v1Res.status === 204) {
+                                success++;
+                            } else {
+                                failed++;
+                            }
+                        } catch {
                             failed++;
                         }
-                    } catch {
-                        failed++;
                     }
-                    await new Promise(r => setTimeout(r, 500));
+
+                    await new Promise(r => setTimeout(r, 600));
                 }
+
+                const failNote = failed > 0 ? `\n\u001b[1;31m[!] ${failed} failed (rate-limited or invalid ID).\u001b[0m` : '';
                 await message.edit(
-                    `\`\`\`ansi\n\u001b[1;32m[✓] Done. ${success}/20 reports sent for server ${guildId} (harassment & bullying).\u001b[0m${failed > 0 ? `\n\u001b[1;31m[!] ${failed} failed.\u001b[0m` : ''}\n\`\`\``
+                    `\`\`\`ansi\n\u001b[1;32m[✓] Done. ${success}/20 reports sent for server ${guildId} (harassment & bullying).${failNote}\u001b[0m\n\`\`\``
                 ).catch(() => {});
             } else {
                 await message.edit(
