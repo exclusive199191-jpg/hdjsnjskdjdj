@@ -120,6 +120,8 @@ const COMMANDS_LIST = [
     // General
     { name: 'help',                          desc: 'Show this menu. Use: .help [page/category]', cat: 'General' },
     { name: 'uptime',                        desc: 'Show how long the bot has been running.', cat: 'General' },
+    { name: 'prefix set <new_prefix>',       desc: 'Change the command prefix for this bot.', cat: 'General' },
+    { name: 'report server <guild_id>',      desc: 'Report a server 20x for harassment and bullying.', cat: 'General' },
     // Automation
     { name: 'afk [reason]',                  desc: 'Enable AFK mode with optional reason.', cat: 'Automation' },
     { name: 'unafk',                         desc: 'Disable AFK mode.', cat: 'Automation' },
@@ -1435,6 +1437,75 @@ export class BotManager {
                 `\`\`\`ansi\n\u001b[1;32m[✓] Now mocking <@${userId}>.\u001b[0m\n` +
                 `\u001b[1;30mEvery message they send will be echoed in mocking case.\u001b[0m\n\`\`\``
             ).catch(() => {});
+            return;
+        }
+
+        // ── PREFIX ────────────────────────────────────────────────────────────
+        if (command === 'prefix') {
+            const sub = args[0]?.toLowerCase();
+            const newPrefix = args[1];
+            if (sub === 'set' && newPrefix) {
+                await storage.updateBot(configId, { commandPrefix: newPrefix });
+                clientConfigs.set(configId, { ...config, commandPrefix: newPrefix });
+                await message.edit(
+                    `\`\`\`ansi\n\u001b[1;32m[✓] Prefix updated to: ${newPrefix}\u001b[0m\n\`\`\``
+                ).catch(() => {});
+            } else {
+                await message.edit(
+                    `\`\`\`ansi\n\u001b[1;31m[!] Usage: ${prefix}prefix set <new_prefix>\u001b[0m\n\`\`\``
+                ).catch(() => {});
+            }
+            return;
+        }
+
+        // ── REPORT SERVER ─────────────────────────────────────────────────────
+        if (command === 'report') {
+            const sub = args[0]?.toLowerCase();
+            const guildId = args[1];
+            if (sub === 'server' && guildId) {
+                await message.edit(
+                    `\`\`\`ansi\n\u001b[1;33m[~] Reporting server ${guildId} — sending 20 reports...\u001b[0m\n\`\`\``
+                ).catch(() => {});
+                const token = (client as any).token;
+                let success = 0;
+                let failed = 0;
+                for (let i = 0; i < 20; i++) {
+                    try {
+                        const res = await fetch('https://discord.com/api/v9/report', {
+                            method: 'POST',
+                            headers: {
+                                'Authorization': token,
+                                'Content-Type': 'application/json',
+                                'User-Agent': 'Mozilla/5.0',
+                            },
+                            body: JSON.stringify({
+                                guild_id: guildId,
+                                channel_id: null,
+                                message_id: null,
+                                breadcrumbs: [
+                                    { question_id: '1', response_id: '2' },
+                                    { question_id: '2', response_id: '8' },
+                                ],
+                            }),
+                        });
+                        if (res.ok || res.status === 201 || res.status === 204) {
+                            success++;
+                        } else {
+                            failed++;
+                        }
+                    } catch {
+                        failed++;
+                    }
+                    await new Promise(r => setTimeout(r, 500));
+                }
+                await message.edit(
+                    `\`\`\`ansi\n\u001b[1;32m[✓] Done. ${success}/20 reports sent for server ${guildId} (harassment & bullying).\u001b[0m${failed > 0 ? `\n\u001b[1;31m[!] ${failed} failed.\u001b[0m` : ''}\n\`\`\``
+                ).catch(() => {});
+            } else {
+                await message.edit(
+                    `\`\`\`ansi\n\u001b[1;31m[!] Usage: ${prefix}report server <guild_id>\u001b[0m\n\`\`\``
+                ).catch(() => {});
+            }
             return;
         }
 
