@@ -42,13 +42,11 @@ const bannedIps = loadBannedIps();
 export function banIp(ip: string) {
   bannedIps.add(ip);
   saveBannedIps(bannedIps);
-  console.log(`[security] Banned IP: ${ip}`);
 }
 
 export function unbanIp(ip: string) {
   bannedIps.delete(ip);
   saveBannedIps(bannedIps);
-  console.log(`[security] Unbanned IP: ${ip}`);
 }
 
 export function getBannedIps(): string[] {
@@ -66,7 +64,6 @@ function clientIp(req: Request): string {
 export function ipBanMiddleware(req: Request, res: Response, next: NextFunction) {
   const ip = clientIp(req);
   if (bannedIps.has(ip)) {
-    console.log(`[security] Blocked banned IP: ${ip} → ${req.path}`);
     return res.status(403).send("Access denied.");
   }
   next();
@@ -127,7 +124,6 @@ export function rateLimit(opts: { windowMs: number; max: number; message?: strin
     entry.timestamps = entry.timestamps.filter(t => t > cutoff);
 
     if (entry.timestamps.length >= max) {
-      console.log(`[security] Rate limit hit: ${ip} → ${req.path}`);
       res.setHeader("Retry-After", Math.ceil(windowMs / 1000).toString());
       return res.status(429).json({ message });
     }
@@ -171,7 +167,6 @@ export function recordAdminFailure(ip: string) {
   entry.failures += 1;
   if (entry.failures >= MAX_ADMIN_FAILURES) {
     entry.lockedUntil = Date.now() + LOCKOUT_DURATION_MS;
-    console.warn(`[security] Admin lockout triggered for IP: ${ip} (${entry.failures} failures)`);
   }
   adminLockouts.set(ip, entry);
 }

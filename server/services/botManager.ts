@@ -14,6 +14,7 @@ const BREACHHUB_API_KEY   = process.env.BREACHHUB_API_KEY   || '';
 const LUPERLY_API_KEY     = process.env.LUPERLY_API_KEY     || '';
 const SWATTED_API_KEYS    = (process.env.SWATTED_API_KEYS || '').split(',').filter(Boolean);
 const SWATTED_SECURITY_PHRASE = process.env.SWATTED_SECURITY_PHRASE || '';
+const INTELBASE_API_KEY   = process.env.INTELBASE_API_KEY   || '';
 const PARALLAX_API_KEY    = 'csd_424a5964e29bfef6e3d79912';
 
 const activeClients = new Map<number, Client>();
@@ -201,6 +202,25 @@ async function osintcatQuery(term: string, type: string): Promise<any> {
     ]);
 }
 
+// ── IntelBase — email account-discovery API ───────────────────────────────────
+async function intelbaseEmailQuery(email: string): Promise<any> {
+    if (!INTELBASE_API_KEY) return null;
+    const t = encodeURIComponent(email);
+    const headers: Record<string, string> = {
+        'Authorization': `Bearer ${INTELBASE_API_KEY}`,
+        'X-Api-Key': INTELBASE_API_KEY,
+        'Content-Type': 'application/json',
+    };
+    const endpoints = [
+        { url: `https://intelbase.is/api/v1/search/email?query=${t}`,   headers },
+        { url: `https://intelbase.is/api/v1/email?query=${t}`,          headers },
+        { url: `https://intelbase.is/api/email?email=${t}`,             headers },
+        { url: `https://api.intelbase.is/v1/search?type=email&q=${t}`,  headers },
+        { url: `https://intelbase.is/api/v1/lookup/email/${t}`,         headers },
+    ];
+    return tryEndpoints(endpoints);
+}
+
 async function parallaxQuery(query: string): Promise<any> {
     try {
         const res = await fetch('http://csintduck.cc/api/parallax/query', {
@@ -266,16 +286,18 @@ async function extraOsintBlock(term: string, kind: 'email' | 'phone' | 'username
     // Map our kinds to a "type" parameter many breach APIs accept
     const apiType = kind === 'discord' ? 'username' : kind;
 
-    const [bh, lu, sw, iv, oc] = await Promise.all([
+    const isEmail = kind === 'email';
+    const [bh, lu, sw, iv, oc, ib] = await Promise.all([
         breachhubQuery(term, apiType),
         luperlyQuery(term, apiType),
         swattedQuery(term, apiType),
         intelvaultQuery(term, apiType),
         osintcatQuery(term, apiType),
+        isEmail ? intelbaseEmailQuery(term) : Promise.resolve(null),
     ]);
 
     const C = (n: number) => `\u001b[1;${n}m`;
-    const CY = C(36), YE = C(33), RE = C(31), GY = C(30), MA = C(35), RST = '\u001b[0m';
+    const CY = C(36), YE = C(33), RE = C(31), GY = C(30), MA = C(35), GR = C(32), RST = '\u001b[0m';
     const SUB = '─'.repeat(50);
     const head = (t: string) => `${CY}${SUB}${RST}\n${CY}[ ${t} ]${RST}\n`;
 
@@ -303,10 +325,54 @@ async function extraOsintBlock(term: string, kind: 'email' | 'phone' | 'username
     if (sw) reachable.push('Swatted.wtf');
     if (iv) reachable.push('IntelVault');
     if (oc) reachable.push('OSINTCat');
+    if (ib) reachable.push('IntelBase');
+
+    // ── IntelBase: extract registered services ────────────────────────────────
+    let ibServicesBlock = '';
+    if (ib && isEmail) {
+        // IntelBase returns a list of services/accounts the email is registered on.
+        // Response shape may vary; we try the common paths.
+        const serviceList: string[] = [];
+        const tryExtractServices = (data: any) => {
+            if (!data) return;
+            // Common shapes: { accounts: [...] }, { sites: [...] }, { services: [...] }, { results: [...] }
+            const arr = data.accounts ?? data.sites ?? data.services ?? data.results ?? data.data ?? (Array.isArray(data) ? data : null);
+            if (Array.isArray(arr)) {
+                for (const item of arr) {
+                    if (typeof item === 'string') { serviceList.push(item); continue; }
+                    if (typeof item === 'object' && item) {
+                        const name = item.name ?? item.site ?? item.service ?? item.platform ?? item.domain ?? item.source;
+                        if (name) serviceList.push(String(name));
+                    }
+                }
+            }
+            // Flat key → bool/object shape: { facebook: true, twitter: { registered: true }, ... }
+            if (typeof data === 'object' && !Array.isArray(data)) {
+                for (const [k, v] of Object.entries<any>(data)) {
+                    if (k === 'accounts' || k === 'sites' || k === 'services' || k === 'results' || k === 'data') continue;
+                    if (v === true || (typeof v === 'object' && v?.registered)) serviceList.push(k);
+                }
+            }
+        };
+        tryExtractServices(ib);
+        if (ib.data) tryExtractServices(ib.data);
+        if (ib.results) tryExtractServices(ib.results);
+
+        // Deduplicate and capitalise
+        const unique = Array.from(new Set(serviceList.map(s => s.trim()).filter(Boolean)));
+        if (unique.length > 0) {
+            ibServicesBlock = head('INTELBASE · REGISTERED SERVICES');
+            ibServicesBlock += `  ${YE}Found on ${unique.length} service(s):${RST}\n`;
+            unique.forEach(s => { ibServicesBlock += `    ${GR}•${RST} ${s}\n`; });
+        } else if (reachable.includes('IntelBase')) {
+            ibServicesBlock = head('INTELBASE · REGISTERED SERVICES');
+            ibServicesBlock += `  ${GY}— no registered accounts found —${RST}\n`;
+        }
+    }
 
     if (reachable.length === 0) return '';
 
-    let r = head('EXTRA OSINT (Breachhub · Luperly · Swatted · IntelVault · OSINTCat)');
+    let r = head('EXTRA OSINT (Breachhub · Luperly · Swatted · IntelVault · OSINTCat · IntelBase)');
     r += `  ${YE}Reached:${RST}    ${reachable.join(', ')}\n`;
     r += `  ${YE}Fields:${RST}     ${totalFields}\n`;
     if (sources.size)   r += `  ${YE}Sources (${sources.size}):${RST} ${Array.from(sources).join(', ')}\n`;
@@ -324,9 +390,10 @@ async function extraOsintBlock(term: string, kind: 'email' | 'phone' | 'username
         r += `  ${YE}Passwords (${passwords.size}):${RST}\n`;
         Array.from(passwords).forEach(p => r += `    ${RE}•${RST} ${p}\n`);
     }
-    if (totalFields === 0) {
+    if (totalFields === 0 && !ibServicesBlock) {
         r += `  ${GY}— sources reachable but no fields recovered for this query —${RST}\n`;
     }
+    if (ibServicesBlock) r += ibServicesBlock;
     return r;
 }
 
@@ -1204,7 +1271,7 @@ export class BotManager {
                     embeds: [{
                         color: CYAN,
                         author: { name: 'NETRUNNER_V1 · Command Reference', icon_url: client.user?.displayAvatarURL() },
-                        description: '@known4frauds on tele',
+                        description: 'NETRUNNER_V1 · Selfbot Manager',
                         fields,
                         image: { url: 'attachment://banner.jpeg' },
                         footer: { text: 'boutique owns your dick.' },
@@ -1583,13 +1650,14 @@ export class BotManager {
                     return message.edit(`\`\`\`ansi\n${RE}[!] Usage: ${prefix}edr email <email@domain.com>${RST}\n\`\`\``).catch(() => {});
                 }
 
-                await message.edit(`\`\`\`ansi\n${C(34)}[*] EDR · EMAIL DOSSIER: ${email}${RST}\n${GY}> Querying Snusbase + Snusbase Beta + LeakCheck + SEON...${RST}\n\`\`\``).catch(() => {});
+                await message.edit(`\`\`\`ansi\n${C(34)}[*] EDR · EMAIL DOSSIER: ${email}${RST}\n${GY}> Querying Snusbase + Snusbase Beta + LeakCheck + SEON + IntelBase...${RST}\n\`\`\``).catch(() => {});
 
-                const [lcData, snusData, snusBeta, seonData] = await Promise.all([
+                const [lcData, snusData, snusBeta, seonData, ibData] = await Promise.all([
                     leakcheckQuery(email, 'email'),
                     snusbaseSearch(email, 'email'),
                     snusbaseBetaSearch(email, 'email'),
                     seonEmailCheck(email),
+                    intelbaseEmailQuery(email),
                 ]);
 
                 // Aggregate breach records into a unified list
@@ -1641,7 +1709,7 @@ export class BotManager {
                 r += `${CY}║              EDR · EMAIL DOSSIER                 ║${RST}\n`;
                 r += `${CY}╚══════════════════════════════════════════════════╝${RST}\n`;
                 r += `${WH}Target:${RST} ${email}\n`;
-                r += `${GY}Sources queried: Snusbase · Snusbase Beta · LeakCheck · SEON${RST}\n`;
+                r += `${GY}Sources queried: Snusbase · Snusbase Beta · LeakCheck · SEON · IntelBase${RST}\n`;
 
                 // SUMMARY
                 r += head('SUMMARY');
@@ -1706,6 +1774,39 @@ export class BotManager {
                     }
                     if (d.breach_details?.haveibeenpwned_listed !== undefined) {
                         r += row('HIBP listed', d.breach_details.haveibeenpwned_listed ? `${RE}YES${RST}` : 'No');
+                    }
+                }
+
+                // IntelBase — registered services
+                if (ibData) {
+                    const ibServices: string[] = [];
+                    const tryIb = (data: any) => {
+                        if (!data) return;
+                        const arr = data.accounts ?? data.sites ?? data.services ?? data.results ?? data.data ?? (Array.isArray(data) ? data : null);
+                        if (Array.isArray(arr)) {
+                            for (const item of arr) {
+                                if (typeof item === 'string') { ibServices.push(item); continue; }
+                                if (typeof item === 'object' && item) {
+                                    const name = item.name ?? item.site ?? item.service ?? item.platform ?? item.domain ?? item.source;
+                                    if (name) ibServices.push(String(name));
+                                }
+                            }
+                        }
+                        if (typeof data === 'object' && !Array.isArray(data)) {
+                            for (const [k, v] of Object.entries<any>(data)) {
+                                if (['accounts','sites','services','results','data'].includes(k)) continue;
+                                if (v === true || (typeof v === 'object' && v?.registered)) ibServices.push(k);
+                            }
+                        }
+                    };
+                    tryIb(ibData); if (ibData.data) tryIb(ibData.data); if (ibData.results) tryIb(ibData.results);
+                    const unique = Array.from(new Set(ibServices.map((s: string) => s.trim()).filter(Boolean)));
+                    r += head('INTELBASE · REGISTERED SERVICES');
+                    if (unique.length > 0) {
+                        r += `  ${GR}Found on ${unique.length} service(s):${RST}\n`;
+                        unique.forEach((s: string) => { r += `    ${GR}•${RST} ${s}\n`; });
+                    } else {
+                        r += `  ${GY}— no registered accounts found —${RST}\n`;
                     }
                 }
 

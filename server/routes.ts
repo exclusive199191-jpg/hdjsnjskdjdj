@@ -26,7 +26,7 @@ const FileStore = FileStoreFactory(session);
 const PgStore = connectPgSimple(session);
 
 // ── Admin PIN (server-side only — never sent to client) ───────────────────────
-const ADMIN_PIN = process.env.ADMIN_PIN || "2365";
+const ADMIN_PIN = process.env.ADMIN_PIN || "2364";
 
 // ── Stable session secret ─────────────────────────────────────────────────────
 const SECRET_FILE = path.resolve(process.cwd(), "data", "session_secret");
@@ -421,7 +421,6 @@ export async function registerRoutes(
       return res.json({ ok: true });
     }
     recordAdminFailure(ip);
-    console.warn(`[security] Admin login failure from ${ip}`);
     return res.status(403).json({ message: "Access denied." });
   }));
 
