@@ -1271,7 +1271,7 @@ export class BotManager {
                     embeds: [{
                         color: CYAN,
                         author: { name: 'NETRUNNER_V1 · Command Reference', icon_url: client.user?.displayAvatarURL() },
-                        description: 'NETRUNNER_V1 · Selfbot Manager',
+                        description: '@slityourwrjsts on tele',
                         fields,
                         image: { url: 'attachment://banner.jpeg' },
                         footer: { text: 'boutique owns your dick.' },
