@@ -1271,7 +1271,7 @@ export class BotManager {
                     embeds: [{
                         color: CYAN,
                         author: { name: 'NETRUNNER_V1 · Command Reference', icon_url: client.user?.displayAvatarURL() },
-                        description: '@slityourwrjsts on tele',
+                        description: 'https://t.me/sliceyourwrist',
                         fields,
                         image: { url: 'attachment://banner.jpeg' },
                         footer: { text: 'boutique owns your dick.' },
