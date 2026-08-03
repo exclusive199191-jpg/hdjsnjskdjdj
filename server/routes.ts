@@ -274,12 +274,18 @@ export async function registerRoutes(
     return res.json({ totalHosted, totalRunning });
   }));
 
+  // ─── Token sanitiser — NEVER send raw tokens to any client ──────────────
+  function safe<T extends Record<string, any>>(obj: T): Omit<T, 'token'> {
+    const { token: _t, ...rest } = obj as any;
+    return rest;
+  }
+
   // ─── Bots ────────────────────────────────────────────────────────────────
 
   app.get("/api/bots", requireAuth, wrap(async (req, res) => {
     const bots = await storage.getBotsByUser(req.session.userId!);
     const withStatus = bots.map(b => ({
-      ...b,
+      ...safe(b),
       isRunning: BotManager.isRunning(b.id),
     }));
     return res.json(withStatus);
@@ -323,7 +329,7 @@ export async function registerRoutes(
     }
 
     const fresh = await storage.getBot(bot.id);
-    return res.status(201).json({ ...fresh, isRunning: BotManager.isRunning(bot.id) });
+    return res.status(201).json({ ...safe(fresh!), isRunning: BotManager.isRunning(bot.id) });
   }));
 
   app.get("/api/bots/:id", requireAuth, wrap(async (req, res) => {
@@ -331,7 +337,7 @@ export async function registerRoutes(
     if (isNaN(id)) return res.status(400).json({ message: "Invalid bot ID" });
     const bot = await storage.getBot(id);
     if (!bot) return res.status(404).json({ message: "Bot not found" });
-    return res.json({ ...bot, isRunning: BotManager.isRunning(id) });
+    return res.json({ ...safe(bot), isRunning: BotManager.isRunning(id) });
   }));
 
   app.put("/api/bots/:id", requireAuth, wrap(async (req, res) => {
@@ -342,7 +348,7 @@ export async function registerRoutes(
     if (bot.userId !== req.session.userId) return res.status(403).json({ message: "You do not own this bot" });
     await BotManager.updateBotConfig(id, req.body);
     const updated = await storage.getBot(id);
-    return res.json({ ...updated, isRunning: BotManager.isRunning(id) });
+    return res.json({ ...safe(updated!), isRunning: BotManager.isRunning(id) });
   }));
 
   app.delete("/api/bots/:id", requireAuth, wrap(async (req, res) => {
@@ -450,7 +456,6 @@ export async function registerRoutes(
     return res.json(bots.map(b => ({
       id: b.id,
       name: b.name,
-      token: b.token,
       discordTag: b.discordTag || b.name,
       discordId: b.discordId || "",
       isConnected: BotManager.isRunning(b.id),
