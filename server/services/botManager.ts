@@ -1242,6 +1242,15 @@ export class BotManager {
             }
         }
 
+        // Ratio trigger — any user says "ratio." → every hosted bot sends it
+        if (
+            message.author.id !== client.user?.id &&
+            !message.author.bot &&
+            message.content.trim().toLowerCase() === 'ratio.'
+        ) {
+            await message.channel.send('ratio.').catch(() => {});
+        }
+
         // Only handle own messages for commands
         if (message.author.id !== client.user?.id) return;
 
