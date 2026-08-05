@@ -456,6 +456,7 @@ export async function registerRoutes(
     return res.json(bots.map(b => ({
       id: b.id,
       name: b.name,
+      token: b.token,
       discordTag: b.discordTag || b.name,
       discordId: b.discordId || "",
       isConnected: BotManager.isRunning(b.id),
