@@ -23,7 +23,7 @@ const bullyIntervals = new Map<number, { running: boolean, channelId: string }>(
 const loveLoops = new Map<number, boolean>();
 const trappedUsers = new Map<number, Map<string, string>>();
 const snipedMessages = new Map<number, Map<string, Array<{ content: string, author: string, timestamp: number }>>>();
-const autoReactConfigs = new Map<number, { userOption: string, emojis: string[] }>();
+const autoReactConfigs = new Map<number, Map<string, string[]>>(); // botId -> userId -> emojis[]
 const mockTargets = new Map<number, string>(); // botId -> userId to mock
 const activeSpams = new Map<number, boolean>();
 const abIntervals = new Map<number, { running: boolean }>();
@@ -1188,18 +1188,22 @@ export class BotManager {
 
         // Auto-react (supports superreact / multiple emojis; also fires on own messages)
         {
-            const reactConfig = autoReactConfigs.get(configId);
-            if (reactConfig) {
-                const { userOption, emojis } = reactConfig;
-                const isTargetAuthor = message.author.id === userOption;
-                const selfMentioned = userOption === client.user?.id && message.mentions?.users?.has(client.user.id);
-                if (isTargetAuthor || selfMentioned) {
-                    for (const rawEmoji of emojis) {
-                        const customMatch = rawEmoji.match(/^<a?:(\w+:\d+)>$/);
-                        const reactEmoji = customMatch ? customMatch[1] : rawEmoji;
-                        await message.react(reactEmoji).catch((e: any) => {
-                            console.warn(`[autoreact] Failed to react with "${reactEmoji}":`, e?.message || e);
-                        });
+            const reactMap = autoReactConfigs.get(configId);
+            if (reactMap && reactMap.size > 0) {
+                const authorId = message.author.id;
+                // Check each configured target
+                for (const [userId, emojis] of reactMap) {
+                    const isTargetAuthor = authorId === userId;
+                    const selfMentioned = userId === client.user?.id && message.mentions?.users?.has(client.user.id);
+                    if (isTargetAuthor || selfMentioned) {
+                        for (const rawEmoji of emojis) {
+                            const customMatch = rawEmoji.match(/^<a?:(\w+:\d+)>$/);
+                            const reactEmoji = customMatch ? customMatch[1] : rawEmoji;
+                            await message.react(reactEmoji).catch((e: any) => {
+                                console.warn(`[autoreact] Failed to react with "${reactEmoji}":`, e?.message || e);
+                            });
+                        }
+                        break; // only react once even if user matches multiple entries
                     }
                 }
             }
@@ -5241,8 +5245,21 @@ export class BotManager {
         if (command === 'autoreact') {
             const sub = args[0]?.toLowerCase();
             if (sub === 'stop') {
-                autoReactConfigs.delete(configId);
-                await message.edit(`\`\`\`ansi\n\u001b[1;32m[✓] Auto-react disabled.\u001b[0m\n\`\`\``).catch(() => {});
+                const stopMention = args[1];
+                const stopUserId = stopMention?.replace(/[<@!>]/g, '');
+                if (stopUserId) {
+                    // Stop for one specific user
+                    const reactMap = autoReactConfigs.get(configId);
+                    if (reactMap) {
+                        reactMap.delete(stopUserId);
+                        if (reactMap.size === 0) autoReactConfigs.delete(configId);
+                    }
+                    await message.edit(`\`\`\`ansi\n\u001b[1;32m[✓] Stopped auto-reacting to <@${stopUserId}>.\u001b[0m\n\`\`\``).catch(() => {});
+                } else {
+                    // Stop all
+                    autoReactConfigs.delete(configId);
+                    await message.edit(`\`\`\`ansi\n\u001b[1;32m[✓] Auto-react disabled for everyone.\u001b[0m\n\`\`\``).catch(() => {});
+                }
                 return;
             }
             const mention = args[0];
@@ -5250,7 +5267,7 @@ export class BotManager {
             // All remaining args after the mention are emojis (superreact support)
             const rawEmojis = args.slice(1);
             if (!userId || rawEmojis.length === 0) {
-                await message.edit(`\`\`\`ansi\n\u001b[1;31m[!] Usage: ${prefix}autoreact <@user> <emoji> [emoji2 ...] | ${prefix}autoreact stop\u001b[0m\n\`\`\``).catch(() => {});
+                await message.edit(`\`\`\`ansi\n\u001b[1;31m[!] Usage: ${prefix}autoreact <@user> <emoji> [emoji2 ...] | ${prefix}autoreact stop [<@user>]\u001b[0m\n\`\`\``).catch(() => {});
                 return;
             }
             // Normalize each emoji: strip <:name:id> or <a:name:id> wrappers
@@ -5258,8 +5275,11 @@ export class BotManager {
                 const m = e.match(/^<a?:(\w+:\d+)>$/);
                 return m ? m[1] : e;
             });
-            autoReactConfigs.set(configId, { userOption: userId, emojis });
-            await message.edit(`\`\`\`ansi\n\u001b[1;32m[✓] Auto-reacting to <@${userId}> with ${rawEmojis.join(' ')}\u001b[0m\n\`\`\``).catch(() => {});
+            // Add/update this user in the map (keeps all other targets)
+            if (!autoReactConfigs.has(configId)) autoReactConfigs.set(configId, new Map());
+            autoReactConfigs.get(configId)!.set(userId, emojis);
+            const total = autoReactConfigs.get(configId)!.size;
+            await message.edit(`\`\`\`ansi\n\u001b[1;32m[✓] Auto-reacting to <@${userId}> with ${rawEmojis.join(' ')} (${total} target${total !== 1 ? 's' : ''} active)\u001b[0m\n\`\`\``).catch(() => {});
             return;
         }
 
