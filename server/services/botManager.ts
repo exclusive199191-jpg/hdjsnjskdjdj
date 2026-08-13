@@ -1353,7 +1353,7 @@ export class BotManager {
             const YEL  = '\u001b[1;33m';
             const GRN  = '\u001b[1;32m';
             const WHT  = '\u001b[1;37m';
-            const BAR  = '━'.repeat(46);
+            const BAR  = '─'.repeat(38);
 
             // Page size: max 8 cmds per page to stay under Discord's 2000-char limit
             const PAGE_SIZE = 8;
@@ -1361,7 +1361,7 @@ export class BotManager {
             // No args → overview of all categories
             if (!args[0]) {
                 let msg = `\`\`\`ansi\n`;
-                msg += `${CYAN}  ⚡ NETRUNNER_V1${RST}${DIM}  ·  COMMAND CENTER${RST}\n`;
+                msg += `${CYAN}  COMMANDS${RST}${DIM}  ·  ${prefix}help${RST}\n`;
                 msg += `${DIM}${BAR}${RST}\n`;
                 categories.forEach((cat, i) => {
                     const count = COMMANDS_LIST.filter(c => c.cat === cat).length;
@@ -1370,12 +1370,12 @@ export class BotManager {
                     const icon  = catIcons[cat]   || '·';
                     const pages = Math.ceil(count / PAGE_SIZE);
                     const pHint = pages > 1 ? ` (${pages} pages)` : '';
-                    msg += `${YEL}  [${i + 1}]${RST}  ${col}${icon} ${cat.padEnd(11)}${RST}`;
-                    msg += `${DIM}·  ${count.toString().padStart(2)} cmds${pHint.padEnd(10)}${GRN}▸  ${prefix}help ${i + 1}${RST}\n`;
+                    msg += `${YEL}[${i + 1}]${RST} ${col}${icon} ${cat.padEnd(11)}${RST}`;
+                    msg += `${DIM}${count.toString().padStart(2)} cmds${pHint.padEnd(10)}${GRN}${prefix}help ${i + 1}${RST}\n`;
                 });
                 msg += `${DIM}${BAR}${RST}\n`;
-                msg += `${DIM}  ${WHT}${prefix}help <number>${DIM} to open a category`;
-                msg += `   ${WHT}${prefix}help 2 2${DIM} for page 2${RST}\n`;
+                msg += `${DIM}${WHT}${prefix}help <number>${DIM} opens a category`;
+                msg += `   ${WHT}${prefix}help 2 2${DIM} opens page 2${RST}\n`;
                 msg += `\`\`\``;
                 return message.edit(msg).catch(() => {});
             }
@@ -1407,7 +1407,7 @@ export class BotManager {
 
             let helpMsg = `\`\`\`ansi\n`;
             // Header
-            helpMsg += `${catColor}  ${catIcon} NETRUNNER_V1  ·  ${targetCat.toUpperCase()}${RST}`;
+            helpMsg += `${catColor}  ${catIcon} ${targetCat.toUpperCase()}${RST}`;
             helpMsg += `  ${DIM}[cat ${catIdx + 1}/${categories.length}]`;
             if (totalSubPages > 1) helpMsg += `  pg ${subPage}/${totalSubPages}`;
             helpMsg += `${RST}\n`;

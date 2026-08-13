@@ -9,6 +9,7 @@ import Dashboard from "@/pages/Dashboard";
 import BotDetail from "@/pages/BotDetail";
 import Admin from "@/pages/Admin";
 import Accounts from "@/pages/Accounts";
+import Login from "@/pages/Login";
 import { ThemeProvider } from "@/hooks/use-theme";
 import { useSession } from "@/hooks/use-session";
 import { Component, type ReactNode, type ErrorInfo } from "react";
@@ -65,6 +66,7 @@ class ErrorBoundary extends Component<{ children: ReactNode }, { hasError: boole
 function Router() {
   return (
     <Switch>
+      <Route path="/login" component={Login} />
       <Route path="/" component={Dashboard} />
       <Route path={R.routeBot} component={BotDetail} />
       <Route path={R.routeAdmin} component={Admin} />
@@ -88,7 +90,7 @@ function AppInner() {
     );
   }
 
-  if (isError || !session) {
+  if (isError) {
     return (
       <div className="min-h-screen bg-black flex items-center justify-center p-6">
         <div className="max-w-md w-full space-y-6 text-center">
@@ -112,6 +114,8 @@ function AppInner() {
       </div>
     );
   }
+
+  if (!session) return <Login />;
 
   return <Router />;
 }

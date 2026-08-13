@@ -105,9 +105,9 @@ export default function Dashboard() {
         <div className="max-w-5xl mx-auto flex items-center justify-between">
           <div className="flex items-center gap-2.5">
             <div className="w-7 h-7 rounded-lg bg-primary/10 border border-primary/20 flex items-center justify-center">
-              <Zap className="w-3.5 h-3.5 text-primary" />
+             <Zap className="w-3.5 h-3.5 text-primary" />
             </div>
-            <span className="font-display font-black text-sm tracking-tight text-white">bothost.host</span>
+             <span className="font-display font-semibold text-sm tracking-tight text-white">bothost</span>
           </div>
           <div className="flex items-center gap-2">
             <ThemeCustomizer />
@@ -129,9 +129,9 @@ export default function Dashboard() {
 
         {/* ── Page header ── */}
         <div>
-          <p className="text-xs font-mono tracking-[0.2em] text-primary/60 uppercase mb-1">Control Panel</p>
-          <h1 className="text-3xl sm:text-4xl font-display font-black text-white tracking-tight">Dashboard</h1>
-          <p className="text-white/40 text-sm mt-1.5">Manage your selfbot connections and settings.</p>
+           <p className="text-xs font-medium tracking-[0.16em] text-primary/70 uppercase mb-2">Workspace</p>
+           <h1 className="text-3xl sm:text-4xl font-display font-semibold text-white tracking-tight">Dashboard</h1>
+           <p className="text-white/45 text-sm mt-2">Keep an eye on your connected Discord accounts.</p>
         </div>
 
         <div className="grid grid-cols-1 lg:grid-cols-[1fr_380px] gap-6">
@@ -142,7 +142,7 @@ export default function Dashboard() {
             {/* Selfbot Status card */}
             <div className={CARD}>
               <div className="flex items-center justify-between px-5 py-4 border-b border-white/[0.06]">
-                <span className="font-semibold text-sm text-white">Selfbot Status</span>
+                 <span className="font-semibold text-sm text-white">Connection status</span>
                 <span className={cn(
                   "inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-mono font-semibold border",
                   activeBots > 0
