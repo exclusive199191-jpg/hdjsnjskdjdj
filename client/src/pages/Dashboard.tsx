@@ -3,13 +3,14 @@ import { Link } from "wouter";
 import { useMutation, useQuery } from "@tanstack/react-query";
 import {
   Activity, ArrowUpRight, Bot, CheckCircle2, ChevronRight, Clock3,
-  Command, ExternalLink, Globe2, LayoutDashboard, LifeBuoy, Loader2,
+  Building2, Camera, Command, Compass, ExternalLink, Globe2, LayoutDashboard, LifeBuoy, Loader2,
   Power, Search, Settings2, ShieldCheck, Trash2, UsersRound, X,
 } from "lucide-react";
 import { useBots, useBotAction, useDeleteBot } from "@/hooks/use-bots";
 import { CreateBotDialog } from "@/components/CreateBotDialog";
 import { BotStatusBadge } from "@/components/BotStatusBadge";
 import { RpcDialog } from "@/components/RpcDialog";
+import { SecurityExposurePanel } from "@/components/SecurityExposurePanel";
 import { ThemeCustomizer } from "@/components/ThemeCustomizer";
 import { useTheme } from "@/hooks/use-theme";
 import { apiRequest } from "@/lib/queryClient";
@@ -71,6 +72,12 @@ function Metric({ label, value, detail, icon: Icon, tone = "text-white" }: {
 function PublicContextLookup() {
   const [ip, setIp] = useState("");
   const [result, setResult] = useState<any>(null);
+  const [heading, setHeading] = useState(0);
+  const [streetImageFailed, setStreetImageFailed] = useState(false);
+  const mapsConfig = useQuery<{ streetViewImageConfigured: boolean }>({
+    queryKey: ["/api/maps/config"],
+    queryFn: async () => (await apiRequest("GET", "/api/maps/config")).json(),
+  });
   const lookup = useMutation({
     mutationFn: async (value: string) => {
       const response = await apiRequest("GET", `${R.apiOsintIpCheck}?ip=${encodeURIComponent(value)}`);
@@ -78,6 +85,18 @@ function PublicContextLookup() {
     },
     onSuccess: setResult,
   });
+
+  const hasCoordinates = typeof result?.latitude === "number" && typeof result?.longitude === "number";
+  const coordinateLabel = hasCoordinates ? `${result.latitude.toFixed(5)}, ${result.longitude.toFixed(5)}` : "";
+  const googleMapUrl = hasCoordinates
+    ? `https://www.google.com/maps?q=${result.latitude},${result.longitude}&z=15&output=embed`
+    : "";
+  const googleStreetViewUrl = hasCoordinates
+    ? `https://www.google.com/maps?q=&layer=c&cbll=${result.latitude},${result.longitude}&cbp=11,${heading},0,0,0&output=embed`
+    : "";
+  const streetImageUrl = hasCoordinates
+    ? `/api/maps/streetview-image?lat=${result.latitude}&lng=${result.longitude}&heading=${heading}`
+    : "";
 
   return (
     <section className="border border-white/[0.08] bg-white/[0.025]">
@@ -112,7 +131,8 @@ function PublicContextLookup() {
         </form>
         {lookup.isError && <p className="mt-3 text-xs text-red-300">{(lookup.error as Error).message}</p>}
         {result && (
-          <div className="mt-4 grid grid-cols-2 sm:grid-cols-4 gap-2">
+          <div className="mt-4">
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
             {[
               ["Address", result.ip],
               ["Location", [result.city, result.region, result.country].filter(Boolean).join(", ") || "—"],
@@ -128,6 +148,114 @@ function PublicContextLookup() {
               <a href={result.mapUrl} target="_blank" rel="noreferrer" className="col-span-2 sm:col-span-4 flex items-center gap-2 text-xs text-violet-300 hover:text-violet-200 mt-1">
                 Open approximate area in OpenStreetMap <ExternalLink className="w-3 h-3" />
               </a>
+            )}
+            </div>
+
+            {hasCoordinates && (
+              <div className="mt-5 border-t border-white/[0.07] pt-5">
+                <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+                  <div>
+                    <div className="flex items-center gap-2">
+                      <Compass className="w-3.5 h-3.5 text-violet-300" />
+                      <h3 className="text-xs font-semibold">Map &amp; Street View</h3>
+                    </div>
+                    <p className="mt-1 text-[10px] text-white/35">
+                      Coordinates: <span className="font-mono text-white/50">{coordinateLabel}</span>
+                    </p>
+                  </div>
+                  <a
+                    href={`https://www.google.com/maps/search/?api=1&query=${result.latitude},${result.longitude}`}
+                    target="_blank"
+                    rel="noreferrer"
+                    className="inline-flex items-center gap-1 text-[10px] text-violet-300 hover:text-violet-200"
+                  >
+                    Open in Google Maps <ExternalLink className="w-3 h-3" />
+                  </a>
+                </div>
+
+                <div className="mt-3 grid grid-cols-1 gap-3 xl:grid-cols-2">
+                  <div className="overflow-hidden border border-white/[0.08] bg-black/20">
+                    <div className="flex items-center gap-2 border-b border-white/[0.08] px-3 py-2">
+                      <Globe2 className="w-3 h-3 text-violet-300" />
+                      <span className="text-[10px] uppercase tracking-wider text-white/35">Interactive map</span>
+                    </div>
+                    <iframe
+                      title={`Google map for ${coordinateLabel}`}
+                      src={googleMapUrl}
+                      className="h-56 w-full border-0"
+                      loading="lazy"
+                      referrerPolicy="no-referrer-when-downgrade"
+                      allowFullScreen
+                    />
+                  </div>
+                  <div className="overflow-hidden border border-white/[0.08] bg-black/20">
+                    <div className="flex items-center justify-between gap-2 border-b border-white/[0.08] px-3 py-2">
+                      <div className="flex items-center gap-2">
+                        <Camera className="w-3 h-3 text-violet-300" />
+                        <span className="text-[10px] uppercase tracking-wider text-white/35">Street View</span>
+                      </div>
+                      <span className="text-[9px] text-white/25">drag to look around</span>
+                    </div>
+                    <iframe
+                      title={`Google Street View for ${coordinateLabel}`}
+                      src={googleStreetViewUrl}
+                      className="h-56 w-full border-0"
+                      loading="lazy"
+                      referrerPolicy="no-referrer-when-downgrade"
+                      allowFullScreen
+                    />
+                  </div>
+                </div>
+
+                <div className="mt-3 flex flex-col gap-3 border border-white/[0.08] bg-black/15 p-3 sm:flex-row sm:items-center">
+                  <div className="flex h-24 w-40 shrink-0 items-center justify-center overflow-hidden border border-white/[0.08] bg-white/[0.03]">
+                    {mapsConfig.data?.streetViewImageConfigured && !streetImageFailed ? (
+                      <img
+                        src={streetImageUrl}
+                        alt={`Street View building preview near ${coordinateLabel}`}
+                        className="h-full w-full object-cover"
+                        loading="lazy"
+                        onError={() => setStreetImageFailed(true)}
+                      />
+                    ) : (
+                      <div className="px-3 text-center">
+                        <Building2 className="mx-auto h-5 w-5 text-white/20" />
+                        <p className="mt-1 text-[9px] text-white/30">Preview unavailable</p>
+                      </div>
+                    )}
+                  </div>
+                  <div className="min-w-0 flex-1">
+                    <p className="flex items-center gap-2 text-xs font-semibold text-white/70">
+                      <Building2 className="h-3.5 w-3.5 text-violet-300" /> Location preview
+                    </p>
+                    <p className="mt-1 text-[10px] leading-relaxed text-white/35">
+                      {mapsConfig.data?.streetViewImageConfigured && !streetImageFailed
+                        ? "Google Street View image near the returned coordinates."
+                        : "Add the GOOGLE_MAPS_API_KEY secret to enable the inline building image preview."}
+                    </p>
+                    <div className="mt-2 flex items-center gap-3">
+                      <label className="text-[9px] uppercase tracking-wider text-white/25" htmlFor="street-heading">Camera heading</label>
+                      <input
+                        id="street-heading"
+                        type="range"
+                        min="0"
+                        max="360"
+                        value={heading}
+                        onChange={event => {
+                          setHeading(Number(event.target.value));
+                          setStreetImageFailed(false);
+                        }}
+                        className="h-1 w-28 accent-violet-300"
+                      />
+                      <span className="font-mono text-[10px] text-white/40">{heading}°</span>
+                    </div>
+                  </div>
+                </div>
+
+                <p className="mt-3 text-[10px] leading-relaxed text-white/25">
+                  IP geolocation is approximate and may identify an ISP or city rather than a person, street address, or exact building. Google imagery can also be unavailable or outdated.
+                </p>
+              </div>
             )}
           </div>
         )}
@@ -384,6 +512,7 @@ export default function Dashboard() {
           </div>
 
           <div className="mt-5"><OsintSection /></div>
+          <div className="mt-5"><SecurityExposurePanel /></div>
 
           <div className="mt-5 grid grid-cols-1 lg:grid-cols-[minmax(0,1fr)_minmax(280px,.65fr)] gap-5">
             <section className="border border-white/[0.08] bg-white/[0.025]">

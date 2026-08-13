@@ -1,0 +1,98 @@
+https://api.xposedornot.com/v1/breaches
+ Copy
+Parameters: all optional. With no parameters the endpoint returns every loaded breach.
+Parameters for the breaches endpoint
+Parameter	In	Required	Type	Description
+domain	query	No	string	Filter the results to a single domain.
+breach_id	query	No	string	Filter the results to a single breach by its ID.
+The API returns a successful response in the format of JSON only.
+
+This JSON can be easily parsed by all scripting languages for easy interpretation and to extract data elements to be used in your respective applications.
+   {
+  "exposedBreaches": [
+    {
+      "breachID": "APK.TW",
+      "breachedDate": "2022-09-01T00:00:00+00:00",
+      "addedDate": "2023-11-08T06:30:35+00:00",
+      "domain": "apk.tw",
+      "exposedData": [
+        "Email addresses",
+        "Usernames",
+        "Passwords",
+        "IP addresses"
+      ],
+      "exposedRecords": 2457094,
+      "exposureDescription": "APK.TW, a Taiwanese Android forum, experienced a data breach in September 2022, affecting 3.7 million members. This incident exposed usernames, email addresses, IP addresses, and passwords encrypted with salted MD5 hashes.",
+      "industry": "Information Technology",
+      "logo": "https://xposedornot.com/static/logos/APKTW.png",
+      "passwordRisk": "easytocrack",
+      "referenceURL": "",
+      "searchable": true,
+      "sensitive": false,
+      "verified": true
+    },
+    {
+      "breachID": "Habibs",
+      "breachedDate": "2021-08-01T00:00:00+00:00",
+      "addedDate": "2023-11-08T06:30:35+00:00",
+      "domain": "habibs.com.br",
+      "exposedData": [
+        "Email addresses",
+        "Names",
+        "Phone numbers",
+        "Dates of birth",
+        "IP addresses"
+      ],
+      "exposedRecords": 3519666,
+      "exposureDescription": "Habib's, a Brazilian fast food restaurant, experienced a significant data breach in August 2021,  that impacted 3.5 million users, revealing personal information like email addresses, IP addresses, names, phone numbers, and dates of birth, along with CPF numbers and social media profile links. ",
+      "industry": "Food",
+      "logo": "https://xposedornot.com/static/logos/Habibs.png",
+      "passwordRisk": "unknown",
+      "referenceURL": "",
+      "searchable": true,
+      "sensitive": false,
+      "verified": true
+    },
+    {
+      "breachID": "GreenGaming",
+      "breachedDate": "2024-03-01T00:00:00+00:00",
+      "addedDate": "2024-04-15T10:22:18+00:00",
+      "domain": "mrgreengaming.com",
+      "exposedData": [
+        "Email addresses",
+        "IP addresses",
+        "Geographic locations",
+        "Usernames",
+        "Dates of birth"
+      ],
+      "exposedRecords": 27142,
+      "exposureDescription": "MrGreenGaming announced on their community forum reported a security breach due to unauthorized access via an inactive administrator account leading to a data breach on 01-Mar-2024. The intrusion led to vandalism and the potential exposure of user data, including usernames, email addresses, IP addresses at account creation, and birthdays.",
+      "industry": "Entertainment",
+      "logo": "https://xposedornot.com/static/logos/GreenGaming.png",
+      "passwordRisk": "unknown",
+      "referenceURL": "https://forums.mrgreengaming.com/topic/30151-%E2%9A%A0%EF%B8%8Fdata-breach%E2%9A%A0%EF%B8%8F/#comment-536079",
+      "searchable": true,
+      "sensitive": false,
+      "verified": true
+    },
+    {
+      "breachID": "CutoutPro",
+      "breachedDate": "2024-02-01T00:00:00+00:00",
+      "addedDate": "2024-03-10T08:15:42+00:00",
+      "domain": "cutout.pro",
+      "exposedData": [
+        "Names",
+        "Passwords",
+        "Email addresses",
+        "IP addresses"
+      ],
+      "exposedRecords": 20021813,
+      "exposureDescription": "Cutout.Pro, an AI-powered photo editing platform, experienced a data breach affecting 20 million users. Information exposed includes email addresses, hashed passwords, IP addresses, and names. A cybercriminal posted 5.93 GB of data on hacker forum, including a 41.4 million record database dump with unique email addresses.",
+      "industry": "Information Technology",
+      "logo": "https://xposedornot.com/static/logos/Cutout.pro.png",
+      "passwordRisk": "easytocrack",
+      "referenceURL": "https://www.bleepingcomputer.com/news/security/20-million-cutoutpro-user-records-leaked-on-data-breach-forum/",
+      "searchable": true,
+      "sensitive": false,
+      "verified": true
+    }
