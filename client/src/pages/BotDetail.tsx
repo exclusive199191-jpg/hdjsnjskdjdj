@@ -72,6 +72,7 @@ const COMMANDS = [
   { cat: "OSINT",      usage: "username breach check <user>",    desc: "Search breach databases for a username." },
   { cat: "OSINT",      usage: "username leak check <user>",      desc: "Search leak databases for a username." },
   { cat: "OSINT",      usage: "members msgs <count>",            desc: "Show the last N messages sent in this server." },
+  { cat: "OSINT",      usage: "history export <user> [count]",   desc: "Export 100–500 messages by a user from the current channel or group chat." },
   { cat: "OSINT",      usage: "osint user full dump <@user>",    desc: "Full OSINT dump on a Discord user." },
   { cat: "OSINT",      usage: "osint discord <id>",              desc: "Deep lookup on a Discord user ID (API + snowflake + breach DBs)." },
   { cat: "OSINT",      usage: "osint server full dump",          desc: "Full OSINT dump on the current server." },
@@ -401,7 +402,7 @@ function BullyTargetsPanel({ value, onChange }: { value: string[]; onChange: (v:
 }
 
 export default function BotDetail() {
-  const [, params] = useRoute(R.routeBot);
+  const [, params] = useRoute<{ id: string }>(R.routeBot);
   const id = Number(params?.id);
   const { toast } = useToast();
   const qc = useQueryClient();

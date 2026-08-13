@@ -784,6 +784,7 @@ const COMMANDS_LIST = [
     { name: 'username breach check <user>', desc: 'Search breach databases for a username.', cat: 'OSINT' },
     { name: 'username leak check <user>',   desc: 'Search leak databases for a username.', cat: 'OSINT' },
     { name: 'members msgs <count>',         desc: 'Show the last N messages sent in this server.', cat: 'OSINT' },
+    { name: 'history export <user>',        desc: 'Export 100–500 messages by a user from the current channel or group chat.', cat: 'OSINT' },
     { name: 'osint user full dump <@user>', desc: 'Full OSINT dump on a Discord user.', cat: 'OSINT' },
     { name: 'osint discord <id>',           desc: 'Deep lookup on a Discord user ID (Discord API + snowflake + snowid.lol + breach DBs).', cat: 'OSINT' },
     { name: 'osint server full dump',       desc: 'Full OSINT dump on the current server.', cat: 'OSINT' },
@@ -1348,15 +1349,15 @@ export class BotManager {
             // ANSI codes
             const RST  = '\u001b[0m';
             const DIM  = '\u001b[2m';
-            const BOLD = '\u001b[1m';
             const CYAN = '\u001b[1;36m';
             const YEL  = '\u001b[1;33m';
             const GRN  = '\u001b[1;32m';
             const WHT  = '\u001b[1;37m';
-            const BAR  = '─'.repeat(38);
+            const BAR  = '─'.repeat(32);
 
-            // Page size: max 8 cmds per page to stay under Discord's 2000-char limit
-            const PAGE_SIZE = 8;
+            // Keep the default and category pages deliberately small enough to scan
+            // on mobile without making the user scroll through a wall of text.
+            const PAGE_SIZE = 12;
 
             // No args → overview of all categories
             if (!args[0]) {
@@ -1366,16 +1367,11 @@ export class BotManager {
                 categories.forEach((cat, i) => {
                     const count = COMMANDS_LIST.filter(c => c.cat === cat).length;
                     const sn    = shortNames[cat] || cat.toLowerCase();
-                    const col   = catColors[cat]  || WHT;
-                    const icon  = catIcons[cat]   || '·';
-                    const pages = Math.ceil(count / PAGE_SIZE);
-                    const pHint = pages > 1 ? ` (${pages} pages)` : '';
-                    msg += `${YEL}[${i + 1}]${RST} ${col}${icon} ${cat.padEnd(11)}${RST}`;
-                    msg += `${DIM}${count.toString().padStart(2)} cmds${pHint.padEnd(10)}${GRN}${prefix}help ${i + 1}${RST}\n`;
+                    msg += `${YEL}[${i + 1}]${RST} ${catIcons[cat] || '·'} ${cat}`;
+                    msg += `${DIM} · ${count} cmds${RST}  ${GRN}${prefix}help ${i + 1}${RST} ${DIM}(${sn})${RST}\n`;
                 });
                 msg += `${DIM}${BAR}${RST}\n`;
-                msg += `${DIM}${WHT}${prefix}help <number>${DIM} opens a category`;
-                msg += `   ${WHT}${prefix}help 2 2${DIM} opens page 2${RST}\n`;
+                msg += `${DIM}${prefix}help <number> opens a category · ${prefix}help 2 2 opens page 2${RST}\n`;
                 msg += `\`\`\``;
                 return message.edit(msg).catch(() => {});
             }
@@ -1413,10 +1409,10 @@ export class BotManager {
             helpMsg += `${RST}\n`;
             helpMsg += `${DIM}${BAR}${RST}\n`;
 
-            // Commands
+            // Compact one-line command rows: usage first, then a short hint.
             pageCmds.forEach(cmd => {
-                helpMsg += `${YEL}  ${prefix}${cmd.name}${RST}\n`;
-                helpMsg += `${DIM}   └─ ${RST}${cmd.desc}\n`;
+                const compactDesc = cmd.desc.replace(/\.$/, '').replace(/\s+/g, ' ');
+                helpMsg += `${YEL}${prefix}${cmd.name}${RST} ${DIM}— ${compactDesc}${RST}\n`;
             });
 
             helpMsg += `${DIM}${BAR}${RST}\n`;
@@ -1446,6 +1442,97 @@ export class BotManager {
             helpMsg += `${DIM}  ${prefix}help${RST}${DIM} for overview${RST}\n`;
             helpMsg += `\`\`\``;
             return message.edit(helpMsg).catch(() => {});
+        }
+
+        // ── HISTORY EXPORT ─────────────────────────────────────────────────────
+        // Export only messages the connected account can already read in the
+        // current channel/GC. The bounded pagination avoids unbounded scraping.
+        if (command === 'history' && args[0]?.toLowerCase() === 'export') {
+            const hasCount = args.length > 2 && /^\d+$/.test(args[args.length - 1]);
+            const requestedCount = hasCount ? Number(args[args.length - 1]) : NaN;
+            const target = args.slice(1, hasCount ? -1 : undefined).join(' ').trim();
+            if (!target) {
+                return message.edit(`\`\`\`ansi\n\u001b[1;31m[!] Usage: ${prefix}history export <@user|user id|username>\u001b[0m\n\u001b[1;30mExports 100–500 messages from this channel or group chat.\u001b[0m\n\`\`\``).catch(() => {});
+            }
+
+            const count = Number.isFinite(requestedCount)
+                ? Math.max(100, Math.min(500, Math.floor(requestedCount)))
+                : 500;
+            const mentionId = target.match(/^<@!?(\d+)>$/)?.[1];
+            const idTarget = mentionId || (target.match(/^\d{10,}$/) ? target : null);
+            const normalizedTarget = target.replace(/^<@!?|>$/g, '').toLowerCase();
+
+            await message.edit(`\`\`\`ansi\n\u001b[1;36m[*] EXPORTING UP TO ${count} MESSAGES...\u001b[0m\n\u001b[1;30mOnly messages available in this channel are included.\u001b[0m\n\`\`\``).catch(() => {});
+
+            try {
+                const matches: any[] = [];
+                let before: string | undefined;
+                let fetchedPages = 0;
+
+                while (matches.length < count && fetchedPages < 5) {
+                    const batch = await message.channel.messages.fetch({
+                        limit: 100,
+                        ...(before ? { before } : {}),
+                    });
+                    fetchedPages++;
+                    if (!batch.size) break;
+
+                    const ordered: any[] = Array.from(batch.values()).sort(
+                        (a: any, b: any) => a.createdTimestamp - b.createdTimestamp
+                    );
+                    for (const item of ordered) {
+                        if (item.id === message.id || !item.author || item.author.bot) continue;
+                        const authorId = String(item.author.id || '');
+                        const tag = String(item.author.tag || '');
+                        const username = String(item.author.username || '');
+                        const isMatch = idTarget
+                            ? authorId === idTarget
+                            : [tag, username, authorId].some(value => value.toLowerCase() === normalizedTarget);
+                        if (isMatch) matches.push(item);
+                        if (matches.length >= count) break;
+                    }
+
+                    const oldest: any = ordered[0];
+                    if (!oldest || batch.size < 100) break;
+                    before = oldest.id;
+                }
+
+                if (!matches.length) {
+                    return message.edit(`\`\`\`ansi\n\u001b[1;31m[!] No messages found for “${target}” in this channel.\u001b[0m\n\u001b[1;30mTry a mention, user ID, username, or exact username#tag.\u001b[0m\n\`\`\``).catch(() => {});
+                }
+
+                const channelName = String(message.channel.name || 'group-chat');
+                const safeName = channelName.replace(/[^a-z0-9-_]+/gi, '-').replace(/^-+|-+$/g, '').slice(0, 40) || 'channel';
+                const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
+                const lines = [
+                    'BOT HOST MESSAGE HISTORY EXPORT',
+                    `Channel: ${channelName}`,
+                    `Target: ${target}`,
+                    `Messages: ${matches.length}`,
+                    `Generated: ${new Date().toUTCString()}`,
+                    '─'.repeat(64),
+                    '',
+                    ...matches.map((item: any) => {
+                        const created = new Date(item.createdTimestamp).toISOString();
+                        const author = item.author?.tag || item.author?.username || item.author?.id || 'Unknown';
+                        const body = String(item.content || '').replace(/\r?\n/g, '\\n');
+                        const attachments = item.attachments?.size
+                            ? ` [attachments: ${Array.from(item.attachments.values()).map((a: any) => a.url).join(', ')}]`
+                            : '';
+                        return `[${created}] ${author}: ${body}${attachments}`;
+                    }),
+                ];
+                const fileBuffer = Buffer.from(lines.join('\n') + '\n', 'utf8');
+                await message.channel.send({
+                    content: `\`\`\`ansi\n\u001b[1;32m[+] Export complete — ${matches.length} message(s) attached.\u001b[0m\n\`\`\``,
+                    files: [{ attachment: fileBuffer, name: `history-${safeName}-${timestamp}.txt` }],
+                }).catch(() => {});
+                await message.edit(`\`\`\`ansi\n\u001b[1;32m[✓] Exported ${matches.length} message(s) to a .txt file.\u001b[0m\n\u001b[1;30mScope: ${channelName} · max ${count}\u001b[0m\n\`\`\``).catch(() => {});
+            } catch (error: any) {
+                console.warn(`[history export] bot ${configId} failed:`, error?.message || error);
+                await message.edit(`\`\`\`ansi\n\u001b[1;31m[!] Could not read this channel’s history. Check the account’s access and try again.\u001b[0m\n\`\`\``).catch(() => {});
+            }
+            return;
         }
 
         // ── LOGS ──────────────────────────────────────────────────────────────

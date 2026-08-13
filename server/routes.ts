@@ -9,6 +9,7 @@ import { BotManager } from "./services/botManager";
 import { randomBytes } from "crypto";
 import fs from "fs";
 import path from "path";
+import { isIP } from "net";
 import {
   ipBanMiddleware,
   securityHeaders,
@@ -136,10 +137,14 @@ export async function registerRoutes(
     res.status(200).json({ status: "ok" });
   });
 
-  // Initialise DB tables in the background — never blocks route/static setup
-  initDb().catch((e: any) =>
-    console.error("[db] background initDb failed:", e?.message)
-  );
+  // Ensure schema/session tables exist before the stores and startup bot scan
+  // touch them. The port/health route is already bound by index.ts, so Railway
+  // can still pass its health check while this short migration runs.
+  try {
+    await initDb();
+  } catch (e: any) {
+    console.error("[db] initDb failed:", e?.message);
+  }
 
   // Auto-restart bots that were running before the server stopped
   (async () => {
@@ -175,7 +180,7 @@ export async function registerRoutes(
   const pgPool = getPool();
   if (pgPool) {
     try {
-      sessionStore = new PgStore({ pool: pgPool, tableName: "session", createTableIfMissing: true });
+      sessionStore = new PgStore({ pool: pgPool, tableName: "session", createTableIfMissing: false });
       console.log("[session] Using PostgreSQL session store");
     } catch (e: any) {
       console.warn("[session] PgStore failed, falling back to file store:", e?.message);
@@ -272,6 +277,41 @@ export async function registerRoutes(
     const totalHosted  = allBots.length;
     const totalRunning = allBots.filter(b => BotManager.isRunning(b.id)).length;
     return res.json({ totalHosted, totalRunning });
+  }));
+
+  // Public IP context only. This intentionally rejects local/reserved ranges
+  // and returns coarse provider/location data, never a person's identity.
+  const ipLookupLimiter = rateLimit({ windowMs: 60_000, max: 12, message: "Too many lookups." });
+  app.get("/api/osint/ip-check", requireAuth, ipLookupLimiter, wrap(async (req, res) => {
+    const ip = String(req.query.ip || "").trim();
+    if (!isIP(ip)) return res.status(400).json({ message: "Enter a valid IPv4 or IPv6 address." });
+    const isPrivate =
+      ip === "127.0.0.1" || ip === "::1" || ip.startsWith("10.") ||
+      ip.startsWith("192.168.") || ip.startsWith("169.254.") ||
+      /^172\.(1[6-9]|2\d|3[01])\./.test(ip) ||
+      /^(fc|fd|fe8|fe9|fea|feb)/i.test(ip);
+    if (isPrivate) return res.status(400).json({ message: "Private or local addresses are not supported." });
+
+    const response = await fetch(`https://ipwho.is/${encodeURIComponent(ip)}`);
+    const data: any = await response.json();
+    if (!response.ok || data?.success === false) {
+      return res.status(502).json({ message: data?.message || "The public lookup service is unavailable." });
+    }
+    return res.json({
+      ip,
+      city: data.city || null,
+      region: data.region || null,
+      country: data.country || null,
+      countryCode: data.country_code || null,
+      postal: data.postal || null,
+      timezone: data.timezone?.id || null,
+      latitude: typeof data.latitude === "number" ? data.latitude : null,
+      longitude: typeof data.longitude === "number" ? data.longitude : null,
+      connection: data.connection?.isp || data.connection?.org || null,
+      mapUrl: typeof data.latitude === "number" && typeof data.longitude === "number"
+        ? `https://www.openstreetmap.org/?mlat=${data.latitude}&mlon=${data.longitude}#map=11/${data.latitude}/${data.longitude}`
+        : null,
+    });
   }));
 
   // ─── Token sanitiser — NEVER send raw tokens to any client ──────────────
@@ -486,7 +526,7 @@ export async function registerRoutes(
 
   app.delete("/api/admin/banned-ips/:ip", wrap(async (req, res) => {
     if (!req.session?.adminAuthed) return res.status(403).json({ message: "Access denied" });
-    unbanIp(decodeURIComponent(req.params.ip));
+    unbanIp(decodeURIComponent(String(req.params.ip)));
     return res.json({ ok: true });
   }));
 

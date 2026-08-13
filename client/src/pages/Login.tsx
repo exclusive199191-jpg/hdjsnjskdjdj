@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { useLogin, useRegister } from "@/hooks/use-auth";
 import { motion, AnimatePresence } from "framer-motion";
-import { LockKeyhole, UserRound, ArrowRight, CircleDot } from "lucide-react";
+import { LockKeyhole, UserRound, ArrowRight, CircleDot, ShieldCheck, Command, Activity } from "lucide-react";
 
 export default function Login() {
   const [mode, setMode] = useState<"login" | "register">("login");
@@ -23,40 +23,71 @@ export default function Login() {
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-background px-4 relative overflow-hidden">
-      <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_center,hsl(246_70%_60%_/_0.10),transparent_58%)]" />
+    <div className="min-h-screen flex items-center justify-center bg-background px-4 py-8 relative overflow-hidden">
+      <div className="absolute inset-0 bg-[linear-gradient(hsl(var(--border)/.16)_1px,transparent_1px),linear-gradient(90deg,hsl(var(--border)/.16)_1px,transparent_1px)] bg-[size:56px_56px] opacity-30" />
+      <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_50%_0%,hsl(217_91%_60%_/_0.14),transparent_55%)]" />
 
       <motion.div
         initial={{ opacity: 0, y: 30 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.5 }}
-        className="relative z-10 w-full max-w-[390px]"
+        className="relative z-10 w-full max-w-4xl"
       >
-        {/* Logo */}
-        <div className="text-center mb-8">
-          <div className="inline-flex items-center justify-center w-11 h-11 rounded-2xl border border-primary/25 bg-primary/10 mb-4">
-            <CircleDot className="w-5 h-5 text-primary" />
+        <div className="grid lg:grid-cols-[1.05fr_.95fr] rounded-3xl border border-white/10 bg-card/85 overflow-hidden backdrop-blur-xl shadow-2xl shadow-black/30">
+          <div className="hidden lg:flex flex-col justify-between p-10 border-r border-white/8 bg-white/[0.02]">
+            <div>
+              <div className="flex items-center gap-3">
+                <div className="inline-flex items-center justify-center w-10 h-10 rounded-xl bg-primary text-primary-foreground shadow-lg shadow-primary/20">
+                  <CircleDot className="w-5 h-5" />
+                </div>
+                <span className="text-lg font-semibold tracking-tight text-white">bothost</span>
+              </div>
+              <div className="mt-20 max-w-sm">
+                <p className="text-xs font-mono uppercase tracking-[0.2em] text-primary/70">Account workspace</p>
+                <h1 className="mt-4 text-4xl font-display font-semibold tracking-tight text-white leading-tight">
+                  Your accounts,<br />in one calm view.
+                </h1>
+                <p className="mt-5 text-sm leading-6 text-white/40">
+                  Keep connected accounts, command controls and public context tools close without the clutter.
+                </p>
+              </div>
+            </div>
+            <div className="space-y-3">
+              {[
+                [Activity, "Live connection status"],
+                [Command, "Compact command reference"],
+                [ShieldCheck, "Private workspace by default"],
+              ].map(([Icon, label]) => (
+                <div key={label as string} className="flex items-center gap-3 text-xs text-white/45">
+                  <span className="w-7 h-7 rounded-lg border border-white/10 bg-white/[0.03] flex items-center justify-center">
+                    <Icon className="w-3.5 h-3.5 text-primary/70" />
+                  </span>
+                  {label as string}
+                </div>
+              ))}
+            </div>
           </div>
-          <h1 className="text-3xl font-display font-semibold tracking-tight text-white">
-            foundingnations
-          </h1>
-          <p className="text-muted-foreground text-sm mt-2">
-            A calmer way to manage your workspace.
-          </p>
-        </div>
 
-        {/* Card */}
-        <div className="relative bg-card/90 border border-white/10 rounded-2xl overflow-hidden backdrop-blur-xl shadow-2xl">
+          <div className="relative">
+            <div className="lg:hidden flex items-center gap-3 px-6 pt-7">
+              <div className="inline-flex items-center justify-center w-10 h-10 rounded-xl bg-primary text-primary-foreground">
+                <CircleDot className="w-5 h-5" />
+              </div>
+              <div>
+                <p className="text-lg font-semibold tracking-tight text-white">bothost</p>
+                <p className="text-xs text-white/35">Account workspace</p>
+              </div>
+            </div>
 
           {/* Tab switcher */}
-          <div className="flex border-b border-white/10 px-2 pt-2">
+          <div className="flex border-b border-white/10 px-6 pt-7 gap-6">
             {(["login", "register"] as const).map((tab) => (
               <button
                 key={tab}
                 onClick={() => setMode(tab)}
-                className={`flex-1 py-3 text-sm font-medium rounded-xl transition-colors ${
+                className={`relative pb-3 text-sm font-medium transition-colors ${
                   mode === tab
-                    ? "text-white bg-white/10"
+                    ? "text-white after:absolute after:inset-x-0 after:-bottom-px after:h-0.5 after:bg-primary"
                     : "text-muted-foreground hover:text-white"
                 }`}
               >
@@ -65,7 +96,7 @@ export default function Login() {
             ))}
           </div>
 
-          <form onSubmit={handleSubmit} className="p-6 sm:p-7 space-y-5">
+          <form onSubmit={handleSubmit} className="p-6 sm:p-8 space-y-5">
             <AnimatePresence mode="wait">
               <motion.div
                 key={mode}
@@ -133,7 +164,7 @@ export default function Login() {
             </AnimatePresence>
           </form>
 
-          <div className="px-7 pb-7 text-center">
+          <div className="px-6 sm:px-8 pb-8 text-center">
             <p className="text-xs text-muted-foreground">
               {mode === "login" ? "No account yet?" : "Already have an account?"}{" "}
               <button
@@ -145,10 +176,11 @@ export default function Login() {
             </p>
           </div>
 
+          </div>
         </div>
 
-        <p className="text-center text-xs text-muted-foreground/50 mt-5">
-          Your bots, your data. No one else can see your account.
+        <p className="text-center text-xs text-muted-foreground/40 mt-5">
+          Your workspace is isolated to your account.
         </p>
       </motion.div>
     </div>
