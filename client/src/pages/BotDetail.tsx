@@ -21,10 +21,10 @@ import { motion, AnimatePresence } from "framer-motion";
 
 function Section({ title, children, icon }: { title: string; children: React.ReactNode; icon?: React.ReactNode }) {
   return (
-    <div className="bg-white/3 border border-white/8 rounded-xl overflow-hidden">
+    <div className="bg-card/70 border border-white/8 rounded-2xl overflow-hidden shadow-sm">
       <div className="px-5 py-4 border-b border-white/8 flex items-center gap-2">
         {icon && <span className="text-primary">{icon}</span>}
-        <h3 className="font-mono text-xs uppercase tracking-widest text-muted-foreground">{title}</h3>
+        <h3 className="text-sm font-semibold text-foreground">{title}</h3>
       </div>
       <div className="p-5">{children}</div>
     </div>
@@ -121,15 +121,15 @@ function CommandsPanel({ prefix }: { prefix: string }) {
   const totalShown = CATEGORIES.reduce((n, cat) => n + filtered(cat).length, 0);
 
   return (
-    <div className="bg-white/3 border border-white/8 rounded-xl overflow-hidden">
+    <div className="bg-card/70 border border-white/8 rounded-2xl overflow-hidden shadow-sm">
       {/* Header */}
       <div className="px-4 py-3 border-b border-white/8 flex items-center gap-2">
         <Terminal className="w-3.5 h-3.5 text-primary flex-shrink-0" />
-        <h3 className="font-mono text-[11px] uppercase tracking-widest text-muted-foreground">Commands</h3>
-        <span className="ml-1.5 font-mono text-[10px] text-primary/50 bg-primary/10 border border-primary/20 rounded px-1.5 py-0.5">{COMMANDS.length}</span>
+         <h3 className="text-sm font-semibold text-foreground">Command reference</h3>
+         <span className="ml-1.5 text-[10px] text-primary/70 bg-primary/10 border border-primary/20 rounded-md px-1.5 py-0.5">{COMMANDS.length}</span>
         <div className="ml-auto flex items-center gap-1">
-          <button onClick={expandAll} className="text-[9px] font-mono text-muted-foreground/40 hover:text-muted-foreground px-1.5 py-0.5 rounded hover:bg-white/5 transition-colors">all</button>
-          <button onClick={collapseAll} className="text-[9px] font-mono text-muted-foreground/40 hover:text-muted-foreground px-1.5 py-0.5 rounded hover:bg-white/5 transition-colors">none</button>
+           <button onClick={expandAll} className="text-[10px] text-muted-foreground/60 hover:text-foreground px-2 py-1 rounded-lg hover:bg-white/5 transition-colors">Expand</button>
+           <button onClick={collapseAll} className="text-[10px] text-muted-foreground/60 hover:text-foreground px-2 py-1 rounded-lg hover:bg-white/5 transition-colors">Collapse</button>
         </div>
       </div>
 

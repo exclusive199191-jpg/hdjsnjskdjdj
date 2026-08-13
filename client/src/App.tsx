@@ -32,25 +32,25 @@ class ErrorBoundary extends Component<{ children: ReactNode }, { hasError: boole
   render() {
     if (this.state.hasError) {
       return (
-        <div className="min-h-screen bg-black flex items-center justify-center p-6">
-          <div className="max-w-md w-full space-y-6 text-center">
-            <div className="w-16 h-16 rounded-full bg-destructive/10 border border-destructive/30 flex items-center justify-center mx-auto">
-              <AlertTriangle className="w-8 h-8 text-destructive" />
+        <div className="min-h-screen bg-background flex items-center justify-center p-6">
+          <div className="max-w-md w-full rounded-2xl border border-border bg-card p-8 shadow-xl text-center">
+            <div className="w-12 h-12 rounded-2xl bg-destructive/10 border border-destructive/20 flex items-center justify-center mx-auto">
+              <AlertTriangle className="w-6 h-6 text-destructive" />
             </div>
-            <div>
-              <h1 className="font-mono text-xl font-bold text-white mb-2">SYSTEM FAULT</h1>
-              <p className="text-muted-foreground text-sm font-mono">
-                An unexpected error occurred in the runtime.
+            <div className="mt-5">
+              <h1 className="text-xl font-semibold text-foreground mb-2">Something went wrong</h1>
+              <p className="text-muted-foreground text-sm">
+                The workspace hit an unexpected error.
               </p>
               {this.state.message && (
-                <p className="mt-3 text-xs font-mono text-destructive/80 bg-destructive/5 border border-destructive/20 rounded-lg px-4 py-3 text-left break-all">
+                <p className="mt-4 text-xs text-destructive/80 bg-destructive/5 border border-destructive/20 rounded-xl px-4 py-3 text-left break-all">
                   {this.state.message}
                 </p>
               )}
             </div>
             <button
               onClick={() => window.location.reload()}
-              className="inline-flex items-center gap-2 h-10 px-6 bg-primary hover:bg-primary/90 text-black font-bold font-mono text-sm rounded-lg transition-all"
+              className="inline-flex items-center gap-2 h-10 px-5 bg-primary hover:bg-primary/90 text-primary-foreground font-semibold text-sm rounded-xl transition-all"
             >
               <RefreshCw className="w-4 h-4" />
               Reload System
@@ -81,10 +81,10 @@ function AppInner() {
 
   if (isLoading) {
     return (
-      <div className="min-h-screen bg-black flex items-center justify-center">
+        <div className="min-h-screen bg-background flex items-center justify-center">
         <div className="text-center space-y-3">
           <Loader2 className="w-10 h-10 text-primary animate-spin mx-auto" />
-          <p className="font-mono text-primary/60 text-xs animate-pulse">INITIALIZING SESSION...</p>
+          <p className="text-primary/70 text-sm animate-pulse">Loading your workspace…</p>
         </div>
       </div>
     );
@@ -92,20 +92,20 @@ function AppInner() {
 
   if (isError) {
     return (
-      <div className="min-h-screen bg-black flex items-center justify-center p-6">
-        <div className="max-w-md w-full space-y-6 text-center">
-          <div className="w-16 h-16 rounded-full bg-destructive/10 border border-destructive/30 flex items-center justify-center mx-auto">
-            <AlertTriangle className="w-8 h-8 text-destructive" />
+      <div className="min-h-screen bg-background flex items-center justify-center p-6">
+        <div className="max-w-md w-full rounded-2xl border border-border bg-card p-8 shadow-xl text-center">
+          <div className="w-12 h-12 rounded-2xl bg-destructive/10 border border-destructive/20 flex items-center justify-center mx-auto">
+            <AlertTriangle className="w-6 h-6 text-destructive" />
           </div>
-          <div>
-            <h1 className="font-mono text-xl font-bold text-white mb-2">CONNECTION FAILED</h1>
-            <p className="text-muted-foreground text-sm font-mono">
-              Could not establish a session with the server.
+          <div className="mt-5">
+            <h1 className="text-xl font-semibold text-foreground mb-2">Can’t connect</h1>
+            <p className="text-muted-foreground text-sm">
+              We couldn’t establish a session with the server.
             </p>
           </div>
           <button
             onClick={() => window.location.reload()}
-            className="inline-flex items-center gap-2 h-10 px-6 bg-primary hover:bg-primary/90 text-black font-bold font-mono text-sm rounded-lg transition-all"
+            className="inline-flex items-center gap-2 h-10 px-5 bg-primary hover:bg-primary/90 text-primary-foreground font-semibold text-sm rounded-xl transition-all"
           >
             <RefreshCw className="w-4 h-4" />
             Retry Connection

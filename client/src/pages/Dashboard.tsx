@@ -94,30 +94,30 @@ export default function Dashboard() {
     b.id.toString().includes(search)
   );
 
-  const CARD = "bg-white/[0.03] border border-white/[0.07] rounded-2xl overflow-hidden";
+  const CARD = "bg-card/70 border border-white/[0.08] rounded-2xl overflow-hidden shadow-sm";
 
   return (
     <div className="min-h-screen" style={{ backgroundColor: currentBg.cssValue }}>
 
       {/* ── Navbar ── */}
       <header className="sticky top-0 z-40 border-b backdrop-blur-xl px-4 sm:px-6 py-3"
-        style={{ backgroundColor: `${currentBg.cssValue}e8`, borderBottomColor: "rgba(168,85,247,0.18)" }}>
+         style={{ backgroundColor: `${currentBg.cssValue}e8`, borderBottomColor: "hsl(var(--border) / 0.7)" }}>
         <div className="max-w-5xl mx-auto flex items-center justify-between">
           <div className="flex items-center gap-2.5">
-            <div className="w-7 h-7 rounded-lg bg-primary/10 border border-primary/20 flex items-center justify-center">
-             <Zap className="w-3.5 h-3.5 text-primary" />
+             <div className="w-8 h-8 rounded-xl bg-primary/10 border border-primary/20 flex items-center justify-center">
+             <Zap className="w-4 h-4 text-primary" />
             </div>
-             <span className="font-display font-semibold text-sm tracking-tight text-white">bothost</span>
+             <span className="font-display font-semibold text-sm tracking-tight text-foreground">bothost</span>
           </div>
           <div className="flex items-center gap-2">
             <ThemeCustomizer />
             <Link href={R.routeAccounts}>
-              <button className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-primary/20 text-primary/70 hover:text-primary hover:border-primary/40 hover:bg-primary/5 transition-colors text-xs font-mono">
+               <button className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl border border-primary/20 text-primary/80 hover:text-primary hover:border-primary/40 hover:bg-primary/5 transition-colors text-xs">
                 <Users className="w-3 h-3" /><span className="hidden sm:inline">Accounts</span>
               </button>
             </Link>
             <Link href={R.routeAdmin}>
-              <button className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-white/10 text-muted-foreground hover:text-white hover:border-primary/30 hover:bg-primary/5 transition-colors text-xs font-mono">
+               <button className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl border border-white/10 text-muted-foreground hover:text-foreground hover:border-primary/30 hover:bg-primary/5 transition-colors text-xs">
                 <Shield className="w-3 h-3" /><span className="hidden sm:inline">Admin</span>
               </button>
             </Link>
@@ -130,7 +130,7 @@ export default function Dashboard() {
         {/* ── Page header ── */}
         <div>
            <p className="text-xs font-medium tracking-[0.16em] text-primary/70 uppercase mb-2">Workspace</p>
-           <h1 className="text-3xl sm:text-4xl font-display font-semibold text-white tracking-tight">Dashboard</h1>
+           <h1 className="text-3xl sm:text-4xl font-display font-semibold text-foreground tracking-tight">Dashboard</h1>
            <p className="text-white/45 text-sm mt-2">Keep an eye on your connected Discord accounts.</p>
         </div>
 
@@ -142,7 +142,7 @@ export default function Dashboard() {
             {/* Selfbot Status card */}
             <div className={CARD}>
               <div className="flex items-center justify-between px-5 py-4 border-b border-white/[0.06]">
-                 <span className="font-semibold text-sm text-white">Connection status</span>
+                 <span className="font-semibold text-sm text-foreground">Connection status</span>
                 <span className={cn(
                   "inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-mono font-semibold border",
                   activeBots > 0

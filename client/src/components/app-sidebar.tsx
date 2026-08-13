@@ -8,7 +8,7 @@ import {
   SidebarMenuButton, 
   SidebarMenuItem 
 } from "@/components/ui/sidebar";
-import { LayoutDashboard, Shield, Bot, MessageSquare, Users, Settings } from "lucide-react";
+import { LayoutDashboard, Shield, CircleDot } from "lucide-react";
 import { Link, useLocation } from "wouter";
 
 const items = [
@@ -32,8 +32,8 @@ export function AppSidebar() {
       <SidebarContent>
         <SidebarGroup>
           <SidebarGroupLabel className="flex items-center gap-2 px-2 py-4">
-            <Bot className="w-5 h-5" />
-            <span className="font-bold text-lg">Discord.gg/didnt </span>
+            <CircleDot className="w-5 h-5 text-primary" />
+            <span className="font-semibold text-lg text-foreground">bothost</span>
           </SidebarGroupLabel>
           <SidebarGroupContent>
             <SidebarMenu>
