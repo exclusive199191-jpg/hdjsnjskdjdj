@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Link } from "wouter";
 import { useMutation, useQuery } from "@tanstack/react-query";
 import {
@@ -136,6 +136,80 @@ function PublicContextLookup() {
   );
 }
 
+function AmbientCursorGlow() {
+  const glowRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    const glow = glowRef.current;
+    if (!glow || window.matchMedia("(prefers-reduced-motion: reduce)").matches) return;
+    let frame = 0;
+    const move = (event: PointerEvent) => {
+      cancelAnimationFrame(frame);
+      frame = requestAnimationFrame(() => {
+        glow.style.left = `${event.clientX}px`;
+        glow.style.top = `${event.clientY}px`;
+        glow.classList.add("is-visible");
+      });
+    };
+    const leave = () => glow.classList.remove("is-visible");
+    window.addEventListener("pointermove", move, { passive: true });
+    window.addEventListener("blur", leave);
+    document.documentElement.addEventListener("mouseleave", leave);
+    return () => {
+      cancelAnimationFrame(frame);
+      window.removeEventListener("pointermove", move);
+      window.removeEventListener("blur", leave);
+      document.documentElement.removeEventListener("mouseleave", leave);
+    };
+  }, []);
+
+  return <div ref={glowRef} className="cursor-ambient-glow" aria-hidden="true" />;
+}
+
+function OsintSection() {
+  const osintCommands = COMMANDS.filter(command => command.category === "OSINT");
+  return (
+    <section className="relative overflow-hidden border border-primary/15 bg-primary/[0.025]">
+      <div className="absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-primary/60 to-transparent" />
+      <div className="flex flex-col gap-3 px-5 py-4 border-b border-white/[0.08] sm:flex-row sm:items-center sm:justify-between">
+        <div className="flex items-start gap-3">
+          <div className="flex h-8 w-8 shrink-0 items-center justify-center border border-primary/25 bg-primary/[0.08]">
+            <Globe2 className="h-4 w-4 text-primary" />
+          </div>
+          <div>
+            <p className="text-[10px] font-semibold uppercase tracking-[0.2em] text-primary/75">OSINT desk</p>
+            <h2 className="mt-1 text-sm font-semibold">Public context &amp; intelligence</h2>
+            <p className="mt-1 text-xs text-white/35">Authorized, coarse public lookups in one controlled workspace.</p>
+          </div>
+        </div>
+        <Link href={R.routeSupport} className="flex items-center gap-1 text-[11px] text-primary hover:text-primary/80">
+          View command docs <ArrowUpRight className="h-3 w-3" />
+        </Link>
+      </div>
+      <div className="grid grid-cols-1 divide-y divide-white/[0.07] lg:grid-cols-[minmax(0,1.1fr)_minmax(280px,.9fr)] lg:divide-x lg:divide-y-0">
+        <div className="p-5"><PublicContextLookup /></div>
+        <div>
+          <div className="px-5 py-4 border-b border-white/[0.07]">
+            <p className="text-[10px] uppercase tracking-[0.18em] text-white/30">Discord OSINT commands</p>
+            <p className="mt-1 text-xs text-white/35">{osintCommands.length} documented workflows available in support.</p>
+          </div>
+          <div className="divide-y divide-white/[0.06]">
+            {osintCommands.map(command => (
+              <Link key={command.usage} href={R.routeSupport} className="group flex items-center justify-between gap-4 px-5 py-3 hover:bg-white/[0.035]">
+                <div className="min-w-0">
+                  <p className="truncate font-mono text-[11px] text-primary/85">{command.usage}</p>
+                  <p className="mt-1 truncate text-[11px] text-white/35">{command.summary}</p>
+                </div>
+                <ChevronRight className="h-3.5 w-3.5 shrink-0 text-white/20 transition-transform group-hover:translate-x-0.5 group-hover:text-primary" />
+              </Link>
+            ))}
+          </div>
+        </div>
+      </div>
+    </section>
+  );
+}
+
 function AccountRow({ bot, onRpc }: { bot: BotConfig; onRpc: (bot: BotConfig) => void }) {
   const deleteBot = useDeleteBot();
   const action = useBotAction();
@@ -190,7 +264,8 @@ export default function Dashboard() {
   }
 
   return (
-    <div className="min-h-screen flex bg-[#090a0d] text-white" style={{ backgroundColor: currentBg.cssValue }}>
+    <div className="relative min-h-screen flex bg-[#090a0d] text-white" style={{ backgroundColor: currentBg.cssValue }}>
+      <AmbientCursorGlow />
       <Rail />
       <aside className="hidden md:flex w-[248px] shrink-0 min-h-screen border-r border-white/[0.08] bg-black/10 flex-col">
         <div className="h-[72px] px-5 flex items-center border-b border-white/[0.08]">
@@ -308,16 +383,16 @@ export default function Dashboard() {
             </section>
           </div>
 
-          <div className="mt-5"><PublicContextLookup /></div>
+          <div className="mt-5"><OsintSection /></div>
 
           <div className="mt-5 grid grid-cols-1 lg:grid-cols-[minmax(0,1fr)_minmax(280px,.65fr)] gap-5">
             <section className="border border-white/[0.08] bg-white/[0.025]">
               <div className="flex items-center justify-between px-5 py-4 border-b border-white/[0.08]">
-                <div><h2 className="text-sm font-semibold">Command surface</h2><p className="text-xs text-white/30 mt-1">A quick look at what is available.</p></div>
+                <div><h2 className="text-sm font-semibold">Command surface</h2><p className="text-xs text-white/30 mt-1">A quick look at the full account capability set.</p></div>
                 <Link href={R.routeSupport} className="text-[11px] text-primary hover:text-primary/80 flex items-center gap-1">Open support <ArrowUpRight className="w-3 h-3" /></Link>
               </div>
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-px bg-white/[0.06]">
-                {COMMAND_CATEGORIES.map(category => (
+                {COMMAND_CATEGORIES.filter(category => category !== "OSINT").map(category => (
                   <Link key={category} href={R.routeSupport} className="bg-[#0b0c10] p-4 hover:bg-white/[0.04] transition-colors">
                     <div className="flex items-center justify-between"><span className="text-xs text-white/70">{category}</span><span className="text-[10px] font-mono text-white/25">{COMMANDS.filter(command => command.category === category).length}</span></div>
                     <p className="mt-3 text-[11px] text-white/30">{COMMANDS.find(command => command.category === category)?.summary}</p>

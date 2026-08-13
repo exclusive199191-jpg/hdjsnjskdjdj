@@ -1,3 +1,5 @@
+@import url('https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Space+Mono:wght@400;700&display=swap');
+
 @tailwind base;
 @tailwind utilities;
 @tailwind components;
@@ -47,9 +49,9 @@
   --chart-4: 30 80% 55%;
   --chart-5: 0 72% 51%;
 
-  --font-sans: 'Inter', sans-serif;
+  --font-sans: 'DM Sans', sans-serif;
   --font-serif: Georgia, serif;
-  --font-mono: 'JetBrains Mono', Menlo, monospace;
+  --font-mono: 'Space Mono', Menlo, monospace;
   --radius: .75rem;
   --shadow-2xs: 0px 1px 2px 0px rgba(0,0,0,0.05);
   --shadow-xs: 0px 1px 3px 0px rgba(0,0,0,0.07);
@@ -143,6 +145,7 @@
       radial-gradient(circle at 15% -10%, hsl(246 70% 60% / 0.08), transparent 30rem),
       radial-gradient(circle at 90% 0%, hsl(190 80% 55% / 0.05), transparent 24rem);
     min-height: 100vh;
+    letter-spacing: -0.01em;
   }
 
   ::selection {
@@ -166,6 +169,32 @@
 
   ::-webkit-scrollbar-thumb:hover {
     background: hsl(var(--muted-foreground) / 0.55);
+  }
+}
+
+/* The dashboard's ambient cursor light is deliberately visual-only. */
+.cursor-ambient-glow {
+  position: fixed;
+  z-index: 30;
+  width: 14rem;
+  height: 14rem;
+  border-radius: 999px;
+  pointer-events: none;
+  opacity: 0;
+  transform: translate3d(-50%, -50%, 0);
+  background: radial-gradient(circle, hsl(var(--primary) / 0.11) 0%, hsl(var(--primary) / 0.035) 32%, transparent 70%);
+  filter: blur(8px);
+  transition: opacity 320ms ease;
+  will-change: transform, opacity;
+}
+
+.cursor-ambient-glow.is-visible {
+  opacity: 1;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .cursor-ambient-glow {
+    display: none;
   }
 }
 
