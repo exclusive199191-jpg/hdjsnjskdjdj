@@ -38,10 +38,10 @@ export default function Login() {
             <CircleDot className="w-5 h-5 text-primary" />
           </div>
           <h1 className="text-3xl font-display font-semibold tracking-tight text-white">
-            bothost
+            foundingnations
           </h1>
           <p className="text-muted-foreground text-sm mt-2">
-            Your Discord workspace, in one place.
+            A calmer way to manage your workspace.
           </p>
         </div>
 

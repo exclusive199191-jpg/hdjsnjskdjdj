@@ -386,7 +386,7 @@ export default function Admin() {
             </div>
             <div>
               <span className="font-mono text-sm font-black text-white tracking-widest uppercase">Admin Panel</span>
-              <span className="hidden sm:inline ml-2 font-mono text-[10px] text-primary/60">NETRUNNER_V1</span>
+              <span className="hidden sm:inline ml-2 font-mono text-[10px] text-primary/60">FOUNDINGNATIONS</span>
             </div>
           </div>
 
@@ -745,7 +745,7 @@ export default function Admin() {
         <div className="flex items-center justify-between pt-4 border-t border-white/5 text-[10px] font-mono text-muted-foreground/40">
           <div className="flex items-center gap-2">
             <Zap className="w-3 h-3" />
-            <span>NETRUNNER_V1 ADMIN</span>
+            <span>FOUNDINGNATIONS ADMIN</span>
           </div>
           <span>{bots.length} accounts · {connectedCount} live</span>
         </div>

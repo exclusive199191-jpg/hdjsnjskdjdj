@@ -168,7 +168,7 @@ export default function Accounts() {
         <div>
           <h1 className="text-xl font-display font-black text-white tracking-tight">Linked Accounts</h1>
           <p className="text-sm text-muted-foreground mt-1">
-            All Discord accounts connected to NETRUNNER_V1. Click a card to manage settings.
+            All Discord accounts connected to foundingnations. Click a card to manage settings.
           </p>
         </div>
 

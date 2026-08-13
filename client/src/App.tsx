@@ -26,7 +26,7 @@ class ErrorBoundary extends Component<{ children: ReactNode }, { hasError: boole
   }
 
   componentDidCatch(error: Error, info: ErrorInfo) {
-    console.error("[NETRUNNER] Uncaught error:", error, info);
+    console.error("[foundingnations] Uncaught error:", error, info);
   }
 
   render() {

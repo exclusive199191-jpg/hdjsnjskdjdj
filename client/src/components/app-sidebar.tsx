@@ -33,7 +33,7 @@ export function AppSidebar() {
         <SidebarGroup>
           <SidebarGroupLabel className="flex items-center gap-2 px-2 py-4">
             <CircleDot className="w-5 h-5 text-primary" />
-            <span className="font-semibold text-lg text-foreground">bothost</span>
+            <span className="font-semibold text-lg text-foreground">foundingnations</span>
           </SidebarGroupLabel>
           <SidebarGroupContent>
             <SidebarMenu>

@@ -97,35 +97,69 @@ export default function Dashboard() {
   const CARD = "bg-card/70 border border-white/[0.08] rounded-2xl overflow-hidden shadow-sm";
 
   return (
-    <div className="min-h-screen" style={{ backgroundColor: currentBg.cssValue }}>
+    <div className="min-h-screen flex" style={{ backgroundColor: currentBg.cssValue }}>
+
+      {/* ── App rail ── */}
+      <aside className="hidden lg:flex w-64 shrink-0 min-h-screen border-r border-white/[0.08] bg-black/[0.12] flex-col px-4 py-5">
+        <div className="flex items-center gap-3 px-3 mb-10">
+          <div className="w-9 h-9 rounded-xl bg-primary flex items-center justify-center shadow-lg shadow-primary/20">
+            <span className="text-primary-foreground font-black text-sm">f</span>
+          </div>
+          <div>
+            <p className="font-semibold text-foreground tracking-tight">foundingnations</p>
+            <p className="text-[11px] text-muted-foreground mt-0.5">account workspace</p>
+          </div>
+        </div>
+
+        <div className="px-3 mb-2 text-[10px] font-semibold uppercase tracking-[0.16em] text-muted-foreground/50">
+          Manage
+        </div>
+        <nav className="space-y-1">
+          <div className="flex items-center gap-3 rounded-xl bg-primary/10 text-primary px-3 py-2.5 text-sm font-medium">
+            <Activity className="w-4 h-4" />
+            Overview
+          </div>
+          <Link href={R.routeAccounts} className="flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm text-muted-foreground hover:bg-white/5 hover:text-foreground transition-colors">
+            <Users className="w-4 h-4" />
+            Accounts
+          </Link>
+          <Link href={R.routeAdmin} className="flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm text-muted-foreground hover:bg-white/5 hover:text-foreground transition-colors">
+            <Shield className="w-4 h-4" />
+            Administration
+          </Link>
+        </nav>
+
+        <div className="mt-auto rounded-2xl border border-white/[0.08] bg-white/[0.03] p-4">
+          <p className="text-xs font-medium text-foreground">Need a hand?</p>
+          <p className="text-xs text-muted-foreground mt-1.5 leading-relaxed">Manage accounts and settings from one quiet workspace.</p>
+          <span className="inline-flex items-center gap-1.5 mt-4 text-[11px] text-primary">
+            <span className="w-1.5 h-1.5 rounded-full bg-primary" />
+            All systems normal
+          </span>
+        </div>
+      </aside>
+
+      <div className="min-w-0 flex-1">
 
       {/* ── Navbar ── */}
       <header className="sticky top-0 z-40 border-b backdrop-blur-xl px-4 sm:px-6 py-3"
          style={{ backgroundColor: `${currentBg.cssValue}e8`, borderBottomColor: "hsl(var(--border) / 0.7)" }}>
-        <div className="max-w-5xl mx-auto flex items-center justify-between">
+        <div className="max-w-6xl mx-auto flex items-center justify-between">
           <div className="flex items-center gap-2.5">
-             <div className="w-8 h-8 rounded-xl bg-primary/10 border border-primary/20 flex items-center justify-center">
-             <Zap className="w-4 h-4 text-primary" />
-            </div>
-             <span className="font-display font-semibold text-sm tracking-tight text-foreground">bothost</span>
+            <span className="lg:hidden font-display font-semibold text-sm tracking-tight text-foreground">foundingnations</span>
+            <span className="hidden lg:block text-sm text-muted-foreground">Overview</span>
           </div>
           <div className="flex items-center gap-2">
             <ThemeCustomizer />
-            <Link href={R.routeAccounts}>
-               <button className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl border border-primary/20 text-primary/80 hover:text-primary hover:border-primary/40 hover:bg-primary/5 transition-colors text-xs">
-                <Users className="w-3 h-3" /><span className="hidden sm:inline">Accounts</span>
-              </button>
-            </Link>
-            <Link href={R.routeAdmin}>
-               <button className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl border border-white/10 text-muted-foreground hover:text-foreground hover:border-primary/30 hover:bg-primary/5 transition-colors text-xs">
-                <Shield className="w-3 h-3" /><span className="hidden sm:inline">Admin</span>
-              </button>
-            </Link>
+            <span className="hidden sm:inline-flex items-center gap-2 px-3 py-1.5 rounded-xl border border-white/10 text-xs text-muted-foreground">
+              <span className="w-1.5 h-1.5 rounded-full bg-emerald-400" />
+              Live
+            </span>
           </div>
         </div>
       </header>
 
-      <main className="max-w-5xl mx-auto px-4 sm:px-6 py-8 space-y-8">
+      <main className="max-w-6xl mx-auto px-4 sm:px-8 py-8 lg:py-10 space-y-8">
 
         {/* ── Page header ── */}
         <div>
@@ -134,10 +168,10 @@ export default function Dashboard() {
            <p className="text-white/45 text-sm mt-2">Keep an eye on your connected Discord accounts.</p>
         </div>
 
-        <div className="grid grid-cols-1 lg:grid-cols-[1fr_380px] gap-6">
+         <div className="grid grid-cols-1 lg:grid-cols-[minmax(0,1.5fr)_340px] gap-6">
 
           {/* ── Left col ── */}
-          <div className="space-y-6">
+           <div className="space-y-6 lg:order-2">
 
             {/* Selfbot Status card */}
             <div className={CARD}>
@@ -163,7 +197,7 @@ export default function Dashboard() {
           </div>
 
           {/* ── Right col — hosted accounts ── */}
-          <div className={cn(CARD, "flex flex-col")}>
+           <div className={cn(CARD, "flex flex-col lg:order-1")}>
             <div className="flex items-center justify-between px-5 py-4 border-b border-white/[0.06]">
               <span className="font-semibold text-sm text-white">Your Instances</span>
               <CreateBotDialog />
@@ -267,7 +301,7 @@ export default function Dashboard() {
         </div>{/* end 2-col grid */}
 
         {/* ── Bottom row: Recent Updates + Dev Server + Community Server + csintduck ad ── */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
 
           {/* Recent Updates — first */}
           <div className={CARD}>
@@ -376,8 +410,8 @@ export default function Dashboard() {
               <div className="space-y-2.5">
                 <div className="flex items-center gap-2 text-xs font-mono text-white/40">
                   <Send className="w-3 h-3 text-cyan-400/60 shrink-0" />
-                  <span>Contact Jax:</span>
-                  <a href="https://t.me/fancyjaxy" target="_blank" rel="noopener noreferrer" className="text-cyan-400 hover:text-cyan-300 transition-colors font-semibold">@fancyjaxy</a>
+                  <span>Telegram:</span>
+                  <a href="https://t.me/foundingnations" target="_blank" rel="noopener noreferrer" className="text-cyan-400 hover:text-cyan-300 transition-colors font-semibold">@foundingnations</a>
                 </div>
                 <a href="https://csintduck.cc" target="_blank" rel="noopener noreferrer"
                   className="flex items-center justify-center gap-2 w-full h-10 rounded-xl font-bold text-xs text-black transition-all bg-gradient-to-r from-cyan-400 to-blue-500 hover:from-cyan-300 hover:to-blue-400 shadow-[0_0_20px_rgba(6,182,212,0.25)] hover:shadow-[0_0_28px_rgba(6,182,212,0.4)]">
@@ -400,7 +434,7 @@ export default function Dashboard() {
               <div className="relative">
                 {/* Telegram-style profile bubble */}
                 <div className="w-20 h-20 rounded-2xl bg-gradient-to-br from-primary/30 to-purple-600/30 border border-primary/25 flex items-center justify-center shadow-[0_0_24px_rgba(168,85,247,0.2)]">
-                  <span className="text-3xl font-black text-primary select-none">K</span>
+                  <span className="text-3xl font-black text-primary select-none">F</span>
                 </div>
                 {/* online dot */}
                 <span className="absolute -bottom-1 -right-1 w-4 h-4 rounded-full bg-green-400 border-2 border-black shadow" />
@@ -410,11 +444,11 @@ export default function Dashboard() {
             {/* Identity block */}
             <div className="flex-1 text-center sm:text-left space-y-2">
               <div className="flex flex-col sm:flex-row sm:items-center gap-1.5 sm:gap-3">
-                <span className="text-white font-black text-lg tracking-tight">cursedbibles</span>
+                <span className="text-white font-black text-lg tracking-tight">foundingnations</span>
                 <span className="text-[10px] font-mono text-primary/60 uppercase tracking-widest border border-primary/20 px-2 py-0.5 rounded-full w-fit mx-auto sm:mx-0">Site Developer</span>
               </div>
               <p className="text-xs text-white/45 leading-relaxed max-w-lg">
-                Built and maintains <span className="text-white/70 font-semibold">bothost</span> — reach out if you need help, have a bug to report, or want a specific feature added. DMs are open.
+                Built and maintains <span className="text-white/70 font-semibold">foundingnations</span> — reach out if you need help, have a bug to report, or want a specific feature added. DMs are open.
               </p>
 
               {/* Contact pills */}
@@ -423,7 +457,7 @@ export default function Dashboard() {
                   <svg viewBox="0 0 24 24" className="w-3.5 h-3.5 fill-current" xmlns="http://www.w3.org/2000/svg">
                     <path d="M20.317 4.37a19.791 19.791 0 0 0-4.885-1.515.074.074 0 0 0-.079.037c-.21.375-.444.864-.608 1.25a18.27 18.27 0 0 0-5.487 0 12.64 12.64 0 0 0-.617-1.25.077.077 0 0 0-.079-.037A19.736 19.736 0 0 0 3.677 4.37a.07.07 0 0 0-.032.027C.533 9.046-.32 13.58.099 18.057c.002.022.015.042.03.052a19.9 19.9 0 0 0 5.993 3.03.078.078 0 0 0 .084-.028 14.09 14.09 0 0 0 1.226-1.994.076.076 0 0 0-.041-.106 13.107 13.107 0 0 1-1.872-.892.077.077 0 0 1-.008-.128 10.2 10.2 0 0 0 .372-.292.074.074 0 0 1 .077-.01c3.928 1.793 8.18 1.793 12.062 0a.074.074 0 0 1 .078.01c.12.098.246.198.373.292a.077.077 0 0 1-.006.127 12.299 12.299 0 0 1-1.873.892.077.077 0 0 0-.041.107c.36.698.772 1.362 1.225 1.993a.076.076 0 0 0 .084.028 19.839 19.839 0 0 0 6.002-3.03.077.077 0 0 0 .032-.054c.5-5.177-.838-9.674-3.549-13.66a.061.061 0 0 0-.031-.03z"/>
                   </svg>
-                  cursedbibles
+                  foundingnations
                 </div>
               </div>
             </div>
@@ -435,17 +469,18 @@ export default function Dashboard() {
                 <div className="w-5 h-5 rounded-md bg-primary/20 border border-primary/30 flex items-center justify-center">
                   <Zap className="w-3 h-3 text-primary" />
                 </div>
-                <span className="text-sm font-black text-white/60 tracking-tight">bothost.host</span>
+                   <span className="text-sm font-black text-white/60 tracking-tight">foundingnations</span>
               </div>
             </div>
           </div>
           <div className="h-px bg-gradient-to-r from-transparent via-white/5 to-transparent" />
           <div className="px-6 py-3 flex items-center justify-center">
-            <p className="text-[10px] font-mono text-white/15">© 2025 bothost.host · All rights reserved</p>
+             <p className="text-[10px] font-mono text-white/15">© 2025 foundingnations · All rights reserved</p>
           </div>
         </div>
 
-      </main>
+       </main>
+      </div>
 
       {rpcBot && (
         <RpcDialog
