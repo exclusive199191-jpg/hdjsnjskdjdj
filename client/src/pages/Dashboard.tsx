@@ -120,7 +120,7 @@ export default function Dashboard() {
 
   return (
     <div
-      className="flex min-h-screen bg-[#08050f] text-white"
+      className="ios-safe-bottom flex min-h-[100dvh] bg-[#08050f] text-white"
       style={{
         backgroundColor: currentBg.cssValue,
         backgroundImage: "radial-gradient(circle at 12% 0%, rgba(124,58,237,0.14), transparent 32rem), radial-gradient(circle at 92% 75%, rgba(76,29,149,0.12), transparent 30rem)",
@@ -172,7 +172,7 @@ export default function Dashboard() {
           <div className="flex items-center gap-2"><ThemeCustomizer /><span className="hidden items-center gap-2 border border-white/10 px-2.5 py-1.5 text-xs text-white/35 sm:inline-flex"><span className="h-1.5 w-1.5 animate-pulse rounded-full bg-primary" /> Live</span></div>
         </header>
 
-        <div className="mx-auto max-w-6xl px-5 py-8 sm:px-8 sm:py-10">
+        <div className="mx-auto max-w-6xl px-5 py-8 pb-[calc(2rem+env(safe-area-inset-bottom))] sm:px-8 sm:py-10">
           <div className="flex flex-col justify-between gap-5 lg:flex-row lg:items-end">
             <div>
               <p className="text-[10px] font-semibold uppercase tracking-[0.22em] text-primary/80">Workspace overview</p>

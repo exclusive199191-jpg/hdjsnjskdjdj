@@ -174,7 +174,7 @@ export function CreateBotDialog() {
           Add Bot
         </button>
       </DialogTrigger>
-      <DialogContent className="bg-black/95 border-white/10 sm:max-w-md p-0 overflow-hidden max-h-[90vh] overflow-y-auto">
+      <DialogContent className="bg-black/95 border-white/10 sm:max-w-md p-0 overflow-hidden max-h-[90dvh] overflow-y-auto pb-[env(safe-area-inset-bottom)]">
         <div className="h-px bg-gradient-to-r from-transparent via-primary to-transparent" />
         <div className="px-6 py-5 flex items-center justify-between border-b border-white/8">
           <div className="flex items-center gap-2">

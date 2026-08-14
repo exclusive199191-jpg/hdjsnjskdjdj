@@ -26,7 +26,7 @@ export default function Login() {
   };
 
   return (
-    <div className="relative flex min-h-screen items-center justify-center overflow-hidden bg-[#05020b] px-4">
+    <div className="ios-safe-bottom relative flex min-h-[100dvh] items-center justify-center overflow-hidden bg-[#05020b] px-4">
       <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_18%_10%,rgba(124,58,237,0.28),transparent_38%),radial-gradient(ellipse_at_85%_85%,rgba(76,29,149,0.20),transparent_42%)]" />
       <div className="absolute inset-0 bg-[linear-gradient(135deg,rgba(255,255,255,0.03),transparent_35%,rgba(139,92,246,0.08))]" />
       <div className="absolute inset-0" aria-hidden="true">

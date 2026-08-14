@@ -126,7 +126,7 @@ export default function Accounts() {
   const online = bots?.filter(b => b.isRunning).length ?? 0;
 
   return (
-    <div className="min-h-screen bg-[#0a0a0a]">
+    <div className="ios-safe-bottom min-h-[100dvh] bg-[#0a0a0a]">
       {/* Header */}
       <header
         className="sticky top-0 z-40 border-b backdrop-blur-xl px-4 sm:px-6 py-3 sm:py-4"
@@ -163,7 +163,7 @@ export default function Accounts() {
         </div>
       </header>
 
-      <main className="max-w-7xl mx-auto px-4 sm:px-6 py-6 space-y-6">
+      <main className="max-w-7xl mx-auto px-4 pb-[calc(1.5rem+env(safe-area-inset-bottom))] pt-6 sm:px-6 space-y-6">
         {/* Page heading */}
         <div>
           <h1 className="text-xl font-display font-black text-white tracking-tight">Linked Accounts</h1>

@@ -145,7 +145,19 @@
       radial-gradient(circle at 15% -10%, hsl(246 70% 60% / 0.08), transparent 30rem),
       radial-gradient(circle at 90% 0%, hsl(190 80% 55% / 0.05), transparent 24rem);
     min-height: 100vh;
+    min-height: 100dvh;
+    overflow-x: hidden;
+    -webkit-text-size-adjust: 100%;
+    -webkit-tap-highlight-color: transparent;
     letter-spacing: -0.01em;
+  }
+
+  button,
+  a,
+  input,
+  select,
+  textarea {
+    touch-action: manipulation;
   }
 
   ::selection {
@@ -216,6 +228,25 @@
 @media (prefers-reduced-motion: reduce) {
   .cursor-ambient-glow {
     display: none;
+  }
+}
+
+@media (hover: none) and (pointer: coarse) {
+  input,
+  select,
+  textarea {
+    /* Prevent iOS Safari from zooming when a form control gains focus. */
+    font-size: 16px !important;
+  }
+}
+
+@supports (padding: max(0px)) {
+  .ios-safe-top {
+    padding-top: max(0px, env(safe-area-inset-top));
+  }
+
+  .ios-safe-bottom {
+    padding-bottom: max(0px, env(safe-area-inset-bottom));
   }
 }
 

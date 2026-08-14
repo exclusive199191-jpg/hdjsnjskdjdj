@@ -520,7 +520,7 @@ export default function BotDetail() {
   const bullyTargets = (form.watch("bullyTargets") as string[]) || [];
 
   return (
-    <div className="min-h-screen bg-black">
+    <div className="ios-safe-bottom min-h-[100dvh] bg-black">
       {/* Top nav */}
       <header className="sticky top-0 z-50 border-b border-white/5 bg-black/90 backdrop-blur-xl px-4 sm:px-6 py-3 sm:py-4">
         <div className="max-w-5xl mx-auto flex items-center justify-between gap-2">
@@ -582,7 +582,7 @@ export default function BotDetail() {
         </div>
       </header>
 
-      <main className="max-w-5xl mx-auto px-4 sm:px-6 py-6 sm:py-8">
+      <main className="max-w-5xl mx-auto px-4 pb-[calc(2rem+env(safe-area-inset-bottom))] pt-6 sm:px-6 sm:py-8">
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 sm:gap-6">
           {/* Left column */}
           <div className="lg:col-span-2 space-y-6">
@@ -599,7 +599,7 @@ export default function BotDetail() {
             {isOwner && (
               <Section title="Rich Presence" icon={<Activity className="w-4 h-4" />}>
                 <div className="space-y-4">
-                  <div className="grid grid-cols-2 gap-4">
+                  <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
                     <div className="space-y-1.5">
                       <label className="font-mono text-xs uppercase text-muted-foreground tracking-wider">Activity Type</label>
                       <select
@@ -618,7 +618,7 @@ export default function BotDetail() {
                   <CyberInput label="Title / Details" placeholder="Rich Presence Title" {...form.register("rpcTitle")} data-testid="input-rpc-title" />
                   <CyberInput label="Subtitle / State" placeholder="Rich Presence Subtitle" {...form.register("rpcSubtitle")} data-testid="input-rpc-subtitle" />
                   <CyberInput label="Large Image URL" placeholder="https://..." {...form.register("rpcImage")} data-testid="input-rpc-image" />
-                  <div className="grid grid-cols-2 gap-4">
+                   <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
                     <CyberInput label="Start Timestamp (ms)" placeholder="1700000000000" {...form.register("rpcStartTimestamp")} />
                     <CyberInput label="End Timestamp (ms)" placeholder="1700000000000" {...form.register("rpcEndTimestamp")} />
                   </div>

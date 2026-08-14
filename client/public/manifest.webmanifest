@@ -1,0 +1,18 @@
+{
+  "name": "bothost",
+  "short_name": "bothost",
+  "description": "A private workspace for connected accounts, commands, and rich presence controls.",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#08050f",
+  "theme_color": "#08050f",
+  "orientation": "any",
+  "icons": [
+    {
+      "src": "/favicon.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any maskable"
+    }
+  ]
+}
