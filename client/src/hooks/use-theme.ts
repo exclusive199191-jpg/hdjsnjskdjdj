@@ -51,12 +51,15 @@ export interface ThemeContextValue {
   currentBg: BgPreset;
 }
 
-const STORAGE_KEY = "netrunner_theme_v2";
+const STORAGE_KEY = "foundingnations_theme_v1";
+const DEFAULT_SETTINGS: ThemeSettings = { preset: "purple", bg: "dpurple" };
 
 function applyTheme(settings: ThemeSettings) {
   const preset = THEME_PRESETS.find((p) => p.name === settings.preset) ?? THEME_PRESETS[0];
   const bg = BG_PRESETS.find((b) => b.name === settings.bg) ?? BG_PRESETS[0];
   const root = document.documentElement;
+  root.classList.add("dark");
+  root.style.colorScheme = "dark";
   root.style.setProperty("--primary", preset.primary);
   root.style.setProperty("--ring", preset.primary);
   root.style.setProperty("--primary-foreground", preset.primaryFg);
@@ -77,17 +80,17 @@ function loadSettings(): ThemeSettings {
       if (validPreset) return { preset: parsed.preset, bg: validBg ? parsed.bg : "void" };
     }
   } catch {}
-  return { preset: "green", bg: "void" };
+  return DEFAULT_SETTINGS;
 }
 
 export const ThemeContext = createContext<ThemeContextValue>({
-  settings: { preset: "green", bg: "void" },
+  settings: DEFAULT_SETTINGS,
   setPreset: () => {},
   setBg: () => {},
   presets: THEME_PRESETS,
   bgPresets: BG_PRESETS,
-  currentPreset: THEME_PRESETS[0],
-  currentBg: BG_PRESETS[0],
+  currentPreset: THEME_PRESETS.find((p) => p.name === DEFAULT_SETTINGS.preset)!,
+  currentBg: BG_PRESETS.find((b) => b.name === DEFAULT_SETTINGS.bg)!,
 });
 
 export function ThemeProvider({ children }: { children: ReactNode }) {
@@ -103,8 +106,8 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
   const setPreset = (preset: string) => setSettings((s) => ({ ...s, preset }));
   const setBg = (bg: string) => setSettings((s) => ({ ...s, bg }));
 
-  const currentPreset = THEME_PRESETS.find((p) => p.name === settings.preset) ?? THEME_PRESETS[0];
-  const currentBg = BG_PRESETS.find((b) => b.name === settings.bg) ?? BG_PRESETS[0];
+   const currentPreset = THEME_PRESETS.find((p) => p.name === settings.preset) ?? THEME_PRESETS.find((p) => p.name === DEFAULT_SETTINGS.preset)!;
+   const currentBg = BG_PRESETS.find((b) => b.name === settings.bg) ?? BG_PRESETS.find((b) => b.name === DEFAULT_SETTINGS.bg)!;
 
   return createElement(
     ThemeContext.Provider,

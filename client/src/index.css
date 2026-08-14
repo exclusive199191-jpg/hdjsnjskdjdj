@@ -167,6 +167,27 @@
   ::-webkit-scrollbar-thumb:hover {
     background: hsl(var(--muted-foreground) / 0.55);
   }
+
+  @keyframes snow-fall {
+    0% {
+      transform: translate3d(0, -12vh, 0) rotate(0deg);
+    }
+    100% {
+      transform: translate3d(5vw, 112vh, 0) rotate(180deg);
+    }
+  }
+
+  .snowflake {
+    position: absolute;
+    top: -12vh;
+    width: var(--snow-size);
+    height: var(--snow-size);
+    border-radius: 999px;
+    background: rgba(255, 255, 255, 0.9);
+    box-shadow: 0 0 10px rgba(196, 181, 253, 0.7);
+    animation: snow-fall var(--snow-duration) linear var(--snow-delay) infinite;
+    pointer-events: none;
+  }
 }
 
 /**

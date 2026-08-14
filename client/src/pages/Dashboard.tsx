@@ -97,7 +97,13 @@ export default function Dashboard() {
   const CARD = "bg-card/70 border border-white/[0.08] rounded-2xl overflow-hidden shadow-sm";
 
   return (
-    <div className="min-h-screen flex" style={{ backgroundColor: currentBg.cssValue }}>
+    <div
+      className="min-h-screen flex"
+      style={{
+        backgroundColor: currentBg.cssValue,
+        backgroundImage: "radial-gradient(circle at 15% 0%, rgba(124,58,237,0.12), transparent 32rem), radial-gradient(circle at 90% 75%, rgba(76,29,149,0.10), transparent 28rem)",
+      }}
+    >
 
       {/* ── App rail ── */}
       <aside className="hidden lg:flex w-64 shrink-0 min-h-screen border-r border-white/[0.08] bg-black/[0.12] flex-col px-4 py-5">
@@ -106,7 +112,7 @@ export default function Dashboard() {
             <span className="text-primary-foreground font-black text-sm">f</span>
           </div>
           <div>
-            <p className="font-semibold text-foreground tracking-tight">foundingnations</p>
+            <p className="font-semibold text-foreground tracking-tight">bothost</p>
             <p className="text-[11px] text-muted-foreground mt-0.5">account workspace</p>
           </div>
         </div>
@@ -146,7 +152,7 @@ export default function Dashboard() {
          style={{ backgroundColor: `${currentBg.cssValue}e8`, borderBottomColor: "hsl(var(--border) / 0.7)" }}>
         <div className="max-w-6xl mx-auto flex items-center justify-between">
           <div className="flex items-center gap-2.5">
-            <span className="lg:hidden font-display font-semibold text-sm tracking-tight text-foreground">foundingnations</span>
+            <span className="lg:hidden font-display font-semibold text-sm tracking-tight text-foreground">bothost</span>
             <span className="hidden lg:block text-sm text-muted-foreground">Overview</span>
           </div>
           <div className="flex items-center gap-2">
@@ -300,7 +306,31 @@ export default function Dashboard() {
           </div>
         </div>{/* end 2-col grid */}
 
-        {/* ── Bottom row: Recent Updates + Dev Server + Community Server + csintduck ad ── */}
+         {/* ── Workspace tools ── */}
+         <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+           {[
+             { icon: Zap, title: "Rich Presence", body: "Set activity, timestamps, images, and status.", label: "Open account" },
+             { icon: MessageSquare, title: "Command library", body: "Browse every available command and shortcut.", label: "View commands" },
+             { icon: Settings, title: "Automations", body: "Manage AFK, reactions, presence, and account settings.", label: "Manage settings" },
+           ].map(({ icon: Icon, title, body, label }) => (
+             <div key={title} className="rounded-2xl border border-white/[0.08] bg-white/[0.025] p-5 hover:bg-white/[0.045] transition-colors">
+               <div className="w-9 h-9 rounded-xl bg-primary/10 border border-primary/15 flex items-center justify-center">
+                 <Icon className="w-4 h-4 text-primary" />
+               </div>
+               <h3 className="text-sm font-semibold text-white mt-4">{title}</h3>
+               <p className="text-xs text-white/40 leading-relaxed mt-1.5 min-h-8">{body}</p>
+               {bots?.[0] ? (
+                 <Link href={R.routeBot.replace(":id", String(bots[0].id))} className="inline-flex items-center gap-1.5 mt-4 text-xs font-medium text-primary hover:text-primary/80">
+                   {label} <ChevronRight className="w-3.5 h-3.5" />
+                 </Link>
+               ) : (
+                 <span className="inline-flex items-center gap-1.5 mt-4 text-xs text-white/25">Add an account first</span>
+               )}
+             </div>
+           ))}
+         </div>
+
+         {/* ── Bottom row: Recent Updates + Community Server + Featured Tool ── */}
          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
 
           {/* Recent Updates — first */}
@@ -448,7 +478,7 @@ export default function Dashboard() {
                 <span className="text-[10px] font-mono text-primary/60 uppercase tracking-widest border border-primary/20 px-2 py-0.5 rounded-full w-fit mx-auto sm:mx-0">Site Developer</span>
               </div>
               <p className="text-xs text-white/45 leading-relaxed max-w-lg">
-                Built and maintains <span className="text-white/70 font-semibold">foundingnations</span> — reach out if you need help, have a bug to report, or want a specific feature added. DMs are open.
+                Built and maintains <span className="text-white/70 font-semibold">bothost</span> — reach out if you need help, have a bug to report, or want a specific feature added. DMs are open.
               </p>
 
               {/* Contact pills */}
@@ -469,13 +499,13 @@ export default function Dashboard() {
                 <div className="w-5 h-5 rounded-md bg-primary/20 border border-primary/30 flex items-center justify-center">
                   <Zap className="w-3 h-3 text-primary" />
                 </div>
-                   <span className="text-sm font-black text-white/60 tracking-tight">foundingnations</span>
+                   <span className="text-sm font-black text-white/60 tracking-tight">bothost</span>
               </div>
             </div>
           </div>
           <div className="h-px bg-gradient-to-r from-transparent via-white/5 to-transparent" />
           <div className="px-6 py-3 flex items-center justify-center">
-             <p className="text-[10px] font-mono text-white/15">© 2025 foundingnations · All rights reserved</p>
+             <p className="text-[10px] font-mono text-white/15">© 2025 bothost · All rights reserved</p>
           </div>
         </div>
 
