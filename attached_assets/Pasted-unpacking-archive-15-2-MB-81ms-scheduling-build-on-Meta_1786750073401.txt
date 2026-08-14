@@ -1,0 +1,63 @@
+unpacking archive
+15.2 MB
+81ms
+scheduling build on Metal builder "builder-hzhoqo"
+
+internal
+load build definition from Dockerfile
+0ms
+
+internal
+load metadata for docker.io/library/node:20-alpine
+135ms
+
+internal
+load .dockerignore
+0ms
+uploading snapshot
+13.5 MB
+444ms
+
+builder
+FROM docker.io/library/node:20-alpine@sha256:fb4cd12c85ee03686f6af5362a0b0d56d50c58a04632e6c0fb8363f609372293
+15ms
+
+internal
+load build context
+0ms
+
+builder
+COPY package*.json ./ cached
+0ms
+
+builder
+RUN apk add --no-cache python3 make g++ cached
+0ms
+
+builder
+WORKDIR /app cached
+0ms
+
+builder
+RUN npm ci --registry https://registry.npmjs.org/
+1m 13s
+npm warn deprecated @otplib/preset-default@12.0.1: Please upgrade to v13 of otplib. Refer to otplib docs for migration paths
+npm warn deprecated @otplib/plugin-crypto@12.0.1: Please upgrade to v13 of otplib. Refer to otplib docs for migration paths
+npm warn deprecated @otplib/plugin-thirty-two@12.0.1: Please upgrade to v13 of otplib. Refer to otplib docs for migration paths
+npm warn deprecated discord.js-selfbot-v13@3.7.1: Package no longer supported. Contact Support at https://www.npmjs.com/support for more info.
+npm error code ENOTFOUND
+npm error syscall getaddrinfo
+npm error errno ENOTFOUND
+npm error network request to http://package-firewall.replit.local/npm/session-file-store/-/session-file-store-1.5.0.tgz failed, reason: getaddrinfo ENOTFOUND package-firewall.replit.local
+npm error network This is a problem related to network connectivity.
+npm error network In most cases you are behind a proxy or have bad network settings.
+npm error network
+npm error network If you are behind a proxy, please make sure that the
+npm error network 'proxy' config is set properly.  See: 'npm help config'
+npm notice
+npm notice New major version of npm available! 10.8.2 -> 12.0.2
+npm notice Changelog: https://github.com/npm/cli/releases/tag/v12.0.2
+npm notice To update run: npm install -g npm@12.0.2
+npm notice
+npm error A complete log of this run can be found in: /root/.npm/_logs/2026-08-14T21_51_50_184Z-debug-0.log
+Build Failed: build daemon returned an error < failed to solve: process "/bin/sh -c npm ci --registry https://registry.npmjs.org/" did not complete successfully: exit c

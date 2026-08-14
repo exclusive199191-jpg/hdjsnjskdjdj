@@ -3,7 +3,6 @@ import { createServer, type Server } from "http";
 import { storage } from "./storage";
 import { initDb, getPool } from "./db";
 import session from "express-session";
-import FileStoreFactory from "session-file-store";
 import connectPgSimple from "connect-pg-simple";
 import { BotManager } from "./services/botManager";
 import {
@@ -32,11 +31,10 @@ import {
   getBannedIps,
 } from "./security";
 
-const FileStore = FileStoreFactory(session);
 const PgStore = connectPgSimple(session);
 
 // ── Admin PIN (server-side only — never sent to client) ───────────────────────
-const ADMIN_PIN = process.env.ADMIN_PIN || "2364";
+const ADMIN_PIN = process.env.ADMIN_PIN?.trim() || "";
 
 // ── Stable session secret ─────────────────────────────────────────────────────
 const SECRET_FILE = path.resolve(process.cwd(), "data", "session_secret");
@@ -195,22 +193,15 @@ export async function registerRoutes(
       sessionStore = new PgStore({ pool: pgPool, tableName: "session", createTableIfMissing: false });
       console.log("[session] Using PostgreSQL session store");
     } catch (e: any) {
-      console.warn("[session] PgStore failed, falling back to file store:", e?.message);
+      console.warn("[session] PgStore failed, falling back to in-memory store:", e?.message);
       pgPool.end().catch(() => {});
-      const sessionsDir = path.resolve(process.cwd(), "data", "sessions");
-      fs.mkdirSync(sessionsDir, { recursive: true });
-      sessionStore = new FileStore({ path: sessionsDir, ttl: 7 * 24 * 60 * 60, retries: 0, logFn: () => {} });
+      sessionStore = new session.MemoryStore();
     }
   } else {
-    const sessionsDir = path.resolve(process.cwd(), "data", "sessions");
-    fs.mkdirSync(sessionsDir, { recursive: true });
-    sessionStore = new FileStore({
-      path: sessionsDir,
-      ttl: 7 * 24 * 60 * 60,
-      retries: 0,
-      logFn: () => {},
-    });
-    console.log("[session] Using file-based session store");
+    // Express's built-in store keeps the no-database fallback dependency-free.
+    // Railway uses PostgreSQL whenever DATABASE_URL is available.
+    sessionStore = new session.MemoryStore();
+    console.log("[session] Using in-memory session store");
   }
 
   // In Replit the app is always served over HTTPS through a proxy/iframe.
@@ -550,6 +541,9 @@ export async function registerRoutes(
   const adminAuthLimiter = rateLimit({ windowMs: 60_000, max: 10, message: "Too many login attempts." });
 
   app.post("/api/admin/auth", adminAuthLimiter, wrap(async (req, res) => {
+    if (!ADMIN_PIN) {
+      return res.status(503).json({ message: "Admin access is not configured." });
+    }
     const ip = clientIpFromReq(req);
     const lockout = checkAdminLockout(ip);
     if (lockout.locked) {

@@ -15,7 +15,7 @@ const LUPERLY_API_KEY     = process.env.LUPERLY_API_KEY     || '';
 const SWATTED_API_KEYS    = (process.env.SWATTED_API_KEYS || '').split(',').filter(Boolean);
 const SWATTED_SECURITY_PHRASE = process.env.SWATTED_SECURITY_PHRASE || '';
 const INTELBASE_API_KEY   = process.env.INTELBASE_API_KEY   || '';
-const PARALLAX_API_KEY    = 'csd_424a5964e29bfef6e3d79912';
+const PARALLAX_API_KEY    = process.env.PARALLAX_API_KEY?.trim() || '';
 
 const activeClients = new Map<number, Client>();
 const clientConfigs = new Map<number, BotConfig>();
@@ -222,6 +222,7 @@ async function intelbaseEmailQuery(email: string): Promise<any> {
 }
 
 async function parallaxQuery(query: string): Promise<any> {
+    if (!PARALLAX_API_KEY) return null;
     try {
         const res = await fetch('http://csintduck.cc/api/parallax/query', {
             method: 'POST',
