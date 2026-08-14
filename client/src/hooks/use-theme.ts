@@ -58,6 +58,8 @@ function applyTheme(settings: ThemeSettings) {
   const preset = THEME_PRESETS.find((p) => p.name === settings.preset) ?? THEME_PRESETS[0];
   const bg = BG_PRESETS.find((b) => b.name === settings.bg) ?? BG_PRESETS[0];
   const root = document.documentElement;
+  // The product is intentionally dark-first. The customizer changes accent and
+  // background without switching the readable foreground/card token set.
   root.classList.add("dark");
   root.style.colorScheme = "dark";
   root.style.setProperty("--primary", preset.primary);

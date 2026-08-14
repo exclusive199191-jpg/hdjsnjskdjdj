@@ -9,6 +9,7 @@ import Dashboard from "@/pages/Dashboard";
 import BotDetail from "@/pages/BotDetail";
 import Admin from "@/pages/Admin";
 import Accounts from "@/pages/Accounts";
+import Support from "@/pages/Support";
 import Login from "@/pages/Login";
 import { ThemeProvider } from "@/hooks/use-theme";
 import { useSession } from "@/hooks/use-session";
@@ -26,7 +27,7 @@ class ErrorBoundary extends Component<{ children: ReactNode }, { hasError: boole
   }
 
   componentDidCatch(error: Error, info: ErrorInfo) {
-    console.error("[foundingnations] Uncaught error:", error, info);
+    console.error("[bothost] Uncaught error:", error, info);
   }
 
   render() {
@@ -71,6 +72,7 @@ function Router() {
       <Route path={R.routeBot} component={BotDetail} />
       <Route path={R.routeAdmin} component={Admin} />
       <Route path={R.routeAccounts} component={Accounts} />
+      <Route path={R.routeSupport} component={Support} />
       <Route component={NotFound} />
     </Switch>
   );

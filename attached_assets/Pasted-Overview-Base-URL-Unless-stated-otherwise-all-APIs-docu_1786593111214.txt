@@ -1,0 +1,80 @@
+Overview
+Base URL
+Unless stated otherwise, all APIs documented below can be found after the base URL:
+
+GET https://haveibeenpwned.com/api/v3
+Each documented example uses shorthand to express just the unique component of the path as it appears after the base URL. For example, take the following API path:
+
+/breach/Adobe
+Combined with the base URL, the complete path is expressed as follows:
+
+https://haveibeenpwned.com/api/v3/breach/Adobe
+Authorisation
+Authorisation is required for all APIs that enable searching HIBP by email address or domain, namely retrieving all breaches for an email address, retrieving all pastes for an email address, retrieving all breached email addresses for a domain and retrieving all stealer log domains for a breached email addresses. There is no authorisation required for the free Pwned Passwords API. An HIBP subscription key is required to make an authorised call and can be obtained on the API key page. The key is then passed in a "hibp-api-key" header:
+
+GET https://haveibeenpwned.com/api/v3/{service}/{parameter}
+hibp-api-key: [your key]
+Semantic HTTP response codes are used to indicate the result of the API call:
+
+Code	Description
+401	Unauthorised — the API key provided was not valid
+Additional information may be present in the response body when an API call fails, for example:
+
+Access denied due to missing hibp-api-key.
+Access denied due to improperly formed hibp-api-key.
+Access denied due to invalid hibp-api-key.
+HIBP API keys must be 32-character hexadecimal strings. Keys undergo an initial format check, followed by validation to confirm their authenticity before any processing occurs.
+
+MCP Server
+Have I Been Pwned also publishes an MCP server for AI agents and MCP-capable clients. It exposes HIBP tools for breach metadata, Pwned Passwords, stealer logs, domain workflows and subscriber features via the Model Context Protocol.
+
+If you're building agent-based or conversational experiences rather than integrating directly with the REST API, see the MCP Server documentation for setup guidance, discovery documents, OAuth details and example prompts.
+
+Casing
+Unless stated otherwise, all APIs are case-insensitive. They may be represented in camel case in the documentation for the sake of legibility, but each one of the following paths is equally interchangeable:
+
+POST /domainVerification/generateDnsToken
+POST /domainverification/generatednstoken
+POST /DomainVerification/GenerateDnsToken
+Test API key
+Where supported, a test API key can be used instead of a paid subscription. Test keys provide limited access (typically to test email addresss) and may be any value that conforms to the required key format. For example:
+
+GET /{service}/{parameter}
+hibp-api-key: 00000000000000000000000000000000
+Specifying the API version
+Version 3 of the API is consumable only by specifying the API version in the URL. All API endpoints are requested with the following pattern:
+
+GET /{service}/{parameter}
+Specifying the user agent
+Each request to the API must be accompanied by a user agent request header. Typically, this should be the name of the app consuming the service. A missing user agent will result in an HTTP 403 response. A valid request would look like:
+
+GET /{service}/{parameter}
+user-agent: [your app name]
+The user agent should accurately describe the nature of the API consumer such that it can be clearly identified in the request. Not doing so may result in the request being blocked.
+
+Plan-specific features
+Different API endpoints are available depending on your subscription tier. Throughout this documentation, any API endpoints that aren't freely available are marked with badges indicating which subscription plans support that feature:
+
+Core Pro High RPM
+
+For complete details on plans and tiers, visit the pricing page.
+
+Email Address Search
+Overview
+The most common use of the API is to return a list of all breaches a particular email address has been involved in. HIBP provides two different ways of searching for individual addresses:
+
+By sending the email address directly to the API. This passes the full address via the URL path and discloses it to HIBP.
+By passing a partial hash to the API using k-anonymity. This is a privacy-preserving approach which does not disclose the address being searched to HIBP.
+Getting all breaches for an email address
+Core
+Pro
+High RPM
+The API takes a single parameter and searches directly for that email address. The address is not case-sensitive and will be trimmed of leading or trailing white spaces. The email address should always be URL encoded. This is an authenticated API and an HIBP API key must be passed with the request.
+
+GET /breachedAccount/{email address}
+hibp-api-key: [your key]
+If the address is found in a breach, an HTTP 200 response is returned. By default, only the name of the breach is returned rather than the complete breach data, thus reducing the response body size by approximately 98% compared to returning the full breach model.
+
+[
+  {
+  "Name": ...

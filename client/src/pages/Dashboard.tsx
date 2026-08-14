@@ -1,524 +1,246 @@
-import { useBots, useDeleteBot, useBotAction } from "@/hooks/use-bots";
-import { CreateBotDialog } from "@/components/CreateBotDialog";
-import { BotStatusBadge } from "@/components/BotStatusBadge";
-import { RpcDialog } from "@/components/RpcDialog";
-import { ThemeCustomizer } from "@/components/ThemeCustomizer";
-import { useTheme } from "@/hooks/use-theme";
+import { useState } from "react";
+import { Link } from "wouter";
 import { useQuery } from "@tanstack/react-query";
 import {
-  Loader2, Settings, Power, Trash2, Search, Zap, Bot,
-  Shield, MessageSquare, Users, Clock, Globe, Database,
-  Activity, ChevronRight, ExternalLink, ClipboardList, Send,
+  Activity,
+  ArrowUpRight,
+  Bot,
+  CheckCircle2,
+  ChevronRight,
+  Clock3,
+  Command,
+  LifeBuoy,
+  Loader2,
+  LayoutDashboard,
+  Power,
+  Search,
+  Settings2,
+  ShieldCheck,
+  Trash2,
+  UsersRound,
 } from "lucide-react";
-import { Link } from "wouter";
-import { motion } from "framer-motion";
-import { cn } from "@/lib/utils";
+import { useBots, useBotAction, useDeleteBot } from "@/hooks/use-bots";
+import { CreateBotDialog } from "@/components/CreateBotDialog";
+import { RpcDialog } from "@/components/RpcDialog";
+import { SecurityExposurePanel } from "@/components/SecurityExposurePanel";
+import { ThemeCustomizer } from "@/components/ThemeCustomizer";
+import { useTheme } from "@/hooks/use-theme";
 import { R } from "@/lib/r";
-import React from "react";
+import { COMMANDS, COMMAND_CATEGORIES } from "@/lib/commands";
+import { cn } from "@/lib/utils";
 import type { BotConfig } from "@shared/schema";
 
-/* ── helpers ── */
-function fmtUptime(s: number) {
-  const d = Math.floor(s / 86400);
-  const h = Math.floor((s % 86400) / 3600);
-  const m = Math.floor((s % 3600) / 60);
-  if (d > 0) return `${d}d ${h}h ${m}m`;
-  if (h > 0) return `${h}h ${m}m`;
-  return `${m}m`;
-}
-function fmtNum(n: number | undefined) {
-  if (n === undefined || n === null) return "—";
-  if (n >= 1_000_000) return (n / 1_000_000).toFixed(1).replace(/\.0$/, "") + "M";
-  if (n >= 1_000) return (n / 1_000).toFixed(1).replace(/\.0$/, "") + "K";
-  return n.toLocaleString();
+function formatUptime(seconds: number) {
+  const days = Math.floor(seconds / 86400);
+  const hours = Math.floor((seconds % 86400) / 3600);
+  const minutes = Math.floor((seconds % 3600) / 60);
+  if (days) return `${days}d ${hours}h`;
+  if (hours) return `${hours}h ${minutes}m`;
+  return `${minutes}m`;
 }
 
-/* ── stat row ── */
-function StatRow({ icon: Icon, value, label, color = "text-white" }: {
-  icon: React.ElementType; value: string; label: string; color?: string;
+function StatCard({ label, value, detail, icon: Icon, tone = "text-white" }: {
+  label: string;
+  value: string;
+  detail: string;
+  icon: typeof Activity;
+  tone?: string;
 }) {
   return (
-    <div className="flex items-center gap-4 px-5 py-4 rounded-xl bg-white/[0.03] border border-white/[0.06] hover:bg-white/[0.05] transition-colors">
-      <div className="w-9 h-9 rounded-lg bg-primary/10 border border-primary/15 flex items-center justify-center shrink-0">
-        <Icon className="w-4 h-4 text-primary/70" />
+    <div className="border border-white/[0.08] bg-white/[0.025] p-4">
+      <div className="flex items-center justify-between">
+        <span className="text-[10px] uppercase tracking-[0.18em] text-white/30">{label}</span>
+        <Icon className="w-3.5 h-3.5 text-primary/75" />
       </div>
-      <div className="min-w-0">
-        <p className={cn("text-2xl font-bold tracking-tight leading-none", color)}>{value}</p>
-        <p className="text-[10px] font-mono text-white/30 uppercase tracking-widest mt-1">{label}</p>
+      <p className={cn("mt-5 text-2xl font-semibold tracking-tight", tone)}>{value}</p>
+      <p className="mt-1 text-[11px] text-white/30">{detail}</p>
+    </div>
+  );
+}
+
+function AccountRow({ bot, onRpc }: { bot: BotConfig; onRpc: (bot: BotConfig) => void }) {
+  const action = useBotAction();
+  const deleteBot = useDeleteBot();
+
+  return (
+    <div className="flex flex-col gap-3 border-b border-white/[0.06] px-5 py-4 sm:flex-row sm:items-center sm:justify-between">
+      <div className="flex min-w-0 items-center gap-3">
+        <span className={cn("h-2 w-2 shrink-0 rounded-full", bot.isRunning ? "bg-primary shadow-[0_0_10px_hsl(var(--primary)/.7)]" : "bg-white/20")} />
+        <div className="min-w-0">
+          <p className="truncate text-sm font-semibold text-white">{bot.name}</p>
+          <p className="mt-0.5 truncate text-xs font-mono text-white/30">
+            {bot.discordTag ? `@${bot.discordTag}` : `ID #${String(bot.id).padStart(4, "0")}`}
+          </p>
+        </div>
+      </div>
+      <div className="flex items-center gap-2">
+        <Link href={R.routeBot.replace(":id", String(bot.id))} className="inline-flex h-8 items-center gap-1.5 border border-white/10 px-3 text-[11px] text-white/60 hover:bg-white/[0.05] hover:text-white">
+          <Settings2 className="h-3.5 w-3.5" /> Configure
+        </Link>
+        <button onClick={() => onRpc(bot)} className="h-8 border border-white/10 px-3 text-[11px] text-white/50 hover:bg-white/[0.05] hover:text-white">
+          RPC
+        </button>
+        <button
+          onClick={() => action.mutate({ id: bot.id, action: bot.isRunning ? "stop" : "restart" })}
+          disabled={action.isPending}
+          className={cn("flex h-8 w-8 items-center justify-center border disabled:opacity-50", bot.isRunning ? "border-red-300/20 text-red-300/80 hover:bg-red-300/10" : "border-primary/20 text-primary hover:bg-primary/10")}
+          title={bot.isRunning ? "Stop account" : "Start account"}
+        >
+          <Power className="h-3.5 w-3.5" />
+        </button>
+        <button
+          onClick={() => { if (window.confirm("Remove this account?")) deleteBot.mutate(bot.id); }}
+          className="flex h-8 w-8 items-center justify-center border border-white/10 text-white/25 hover:border-red-300/20 hover:bg-red-300/10 hover:text-red-300"
+          title="Remove account"
+        >
+          <Trash2 className="h-3.5 w-3.5" />
+        </button>
       </div>
     </div>
   );
 }
 
 export default function Dashboard() {
-  const { data: bots, isLoading } = useBots();
-  const deleteBot = useDeleteBot();
-  const botAction = useBotAction();
   const { currentBg } = useTheme();
-  const [search, setSearch] = React.useState("");
-  const [rpcBot, setRpcBot] = React.useState<BotConfig | null>(null);
-  const [hoveredCard, setHoveredCard] = React.useState<number | null>(null);
-
-  const { data: globalStats } = useQuery<{ totalHosted: number; totalRunning: number }>({
-    queryKey: [R.apiStats],
-    refetchInterval: 30000,
-  });
-  const { data: uptimeData } = useQuery<{ uptimeSeconds: number }>({
-    queryKey: [R.apiUptime],
-    refetchInterval: 60000,
-  });
-  const { data: widget } = useQuery<{ name: string; icon: string | null; members: number; online: number; error?: string }>({
-    queryKey: [R.apiDiscordWidget],
-    refetchInterval: 120000,
-  });
-  const { data: announcements } = useQuery<Array<{ id: number; version: string; title: string; body: string; date: string; createdAt: number }>>({
-    queryKey: [R.apiAnnouncements],
-    refetchInterval: 60000,
-  });
+  const { data: bots, isLoading } = useBots();
+  const [search, setSearch] = useState("");
+  const [rpcBot, setRpcBot] = useState<BotConfig | null>(null);
+  const { data: stats } = useQuery<{ totalHosted: number; totalRunning: number }>({ queryKey: [R.apiStats], refetchInterval: 30000 });
+  const { data: uptime } = useQuery<{ uptimeSeconds: number }>({ queryKey: [R.apiUptime], refetchInterval: 60000 });
+  const { data: announcements } = useQuery<Array<{ id: number; title: string; body: string; date: string }>>({ queryKey: [R.apiAnnouncements], refetchInterval: 60000 });
+  const accounts = (bots || []).filter(bot => bot.name.toLowerCase().includes(search.toLowerCase()) || String(bot.id).includes(search));
 
   if (isLoading) {
     return (
-      <div className="min-h-screen flex items-center justify-center" style={{ backgroundColor: currentBg.cssValue }}>
-        <div className="text-center space-y-3">
-          <Loader2 className="w-10 h-10 text-primary animate-spin mx-auto" />
-          <p className="font-mono text-primary/60 text-xs animate-pulse">LOADING INSTANCES...</p>
-        </div>
+      <div className="flex min-h-screen items-center justify-center bg-[#08050f] text-white">
+        <div className="flex items-center gap-3 text-sm text-white/45"><Loader2 className="h-4 w-4 animate-spin text-primary" /> Loading workspace</div>
       </div>
     );
   }
 
-  const totalBots   = globalStats?.totalHosted  ?? 0;
-  const activeBots  = globalStats?.totalRunning ?? 0;
-  const filteredBots = bots?.filter(b =>
-    b.name.toLowerCase().includes(search.toLowerCase()) ||
-    b.id.toString().includes(search)
-  );
-
-  const CARD = "bg-card/70 border border-white/[0.08] rounded-2xl overflow-hidden shadow-sm";
-
   return (
     <div
-      className="min-h-screen flex"
+      className="flex min-h-screen bg-[#08050f] text-white"
       style={{
         backgroundColor: currentBg.cssValue,
-        backgroundImage: "radial-gradient(circle at 15% 0%, rgba(124,58,237,0.12), transparent 32rem), radial-gradient(circle at 90% 75%, rgba(76,29,149,0.10), transparent 28rem)",
+        backgroundImage: "radial-gradient(circle at 12% 0%, rgba(124,58,237,0.14), transparent 32rem), radial-gradient(circle at 92% 75%, rgba(76,29,149,0.12), transparent 30rem)",
       }}
     >
-
-      {/* ── App rail ── */}
-      <aside className="hidden lg:flex w-64 shrink-0 min-h-screen border-r border-white/[0.08] bg-black/[0.12] flex-col px-4 py-5">
-        <div className="flex items-center gap-3 px-3 mb-10">
-          <div className="w-9 h-9 rounded-xl bg-primary flex items-center justify-center shadow-lg shadow-primary/20">
-            <span className="text-primary-foreground font-black text-sm">f</span>
-          </div>
-          <div>
-            <p className="font-semibold text-foreground tracking-tight">bothost</p>
-            <p className="text-[11px] text-muted-foreground mt-0.5">account workspace</p>
+      <aside className="hidden w-[248px] shrink-0 flex-col border-r border-white/[0.08] bg-black/15 md:flex">
+        <div className="flex h-[72px] items-center border-b border-white/[0.08] px-5">
+          <Link href="/" className="flex items-center gap-3" aria-label="bothost overview">
+            <span className="flex h-9 w-9 items-center justify-center rounded-xl bg-primary font-black text-primary-foreground shadow-lg shadow-primary/20">b</span>
+            <span>
+              <span className="block text-sm font-semibold tracking-tight">bothost</span>
+              <span className="mt-1 block text-[10px] uppercase tracking-[0.18em] text-white/25">Account workspace</span>
+            </span>
+          </Link>
+        </div>
+        <div className="p-4">
+          <div className="flex h-9 items-center gap-2 border border-white/10 bg-white/[0.025] px-3 text-xs text-white/30">
+            <Search className="h-3.5 w-3.5" />
+            <input value={search} onChange={event => setSearch(event.target.value)} placeholder="Find an account" className="w-full bg-transparent outline-none placeholder:text-white/25" />
           </div>
         </div>
-
-        <div className="px-3 mb-2 text-[10px] font-semibold uppercase tracking-[0.16em] text-muted-foreground/50">
-          Manage
-        </div>
-        <nav className="space-y-1">
-          <div className="flex items-center gap-3 rounded-xl bg-primary/10 text-primary px-3 py-2.5 text-sm font-medium">
-            <Activity className="w-4 h-4" />
-            Overview
-          </div>
-          <Link href={R.routeAccounts} className="flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm text-muted-foreground hover:bg-white/5 hover:text-foreground transition-colors">
-            <Users className="w-4 h-4" />
-            Accounts
-          </Link>
-          <Link href={R.routeAdmin} className="flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm text-muted-foreground hover:bg-white/5 hover:text-foreground transition-colors">
-            <Shield className="w-4 h-4" />
-            Administration
-          </Link>
+        <div className="px-5 pb-2 pt-3 text-[10px] uppercase tracking-[0.18em] text-white/25">Workspace</div>
+        <nav className="space-y-1 px-3">
+          <div className="flex items-center gap-3 rounded-lg bg-primary/10 px-3 py-2.5 text-sm text-primary"><LayoutDashboard className="h-4 w-4" /> Overview</div>
+          <Link href="/accounts" className="flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm text-white/45 transition-colors hover:bg-white/[0.04] hover:text-white"><UsersRound className="h-4 w-4" /> Accounts <span className="ml-auto text-[10px] text-white/20">{stats?.totalHosted ?? 0}</span></Link>
+          <Link href={R.routeSupport} className="flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm text-white/45 transition-colors hover:bg-white/[0.04] hover:text-white"><LifeBuoy className="h-4 w-4" /> Support</Link>
         </nav>
-
-        <div className="mt-auto rounded-2xl border border-white/[0.08] bg-white/[0.03] p-4">
-          <p className="text-xs font-medium text-foreground">Need a hand?</p>
-          <p className="text-xs text-muted-foreground mt-1.5 leading-relaxed">Manage accounts and settings from one quiet workspace.</p>
-          <span className="inline-flex items-center gap-1.5 mt-4 text-[11px] text-primary">
-            <span className="w-1.5 h-1.5 rounded-full bg-primary" />
-            All systems normal
-          </span>
+        <div className="px-5 pb-2 pt-7 text-[10px] uppercase tracking-[0.18em] text-white/25">Connected accounts</div>
+        <div className="space-y-1 px-3">
+          {(bots || []).slice(0, 8).map(bot => (
+            <Link key={bot.id} href={R.routeBot.replace(":id", String(bot.id))} className="flex items-center gap-2.5 rounded-lg px-3 py-2 transition-colors hover:bg-white/[0.04]">
+              <span className={cn("h-1.5 w-1.5 rounded-full", bot.isRunning ? "bg-primary" : "bg-white/20")} />
+              <span className="truncate text-xs text-white/50">{bot.name}</span>
+            </Link>
+          ))}
+          {!bots?.length && <p className="px-3 text-[11px] text-white/25">No accounts yet.</p>}
+        </div>
+        <div className="mt-auto p-4">
+          <Link href={R.routeSupport} className="block border border-white/[0.08] bg-white/[0.025] p-3 transition-colors hover:bg-white/[0.05]">
+            <div className="flex items-center justify-between"><span className="text-xs text-white/70">Support desk</span><ChevronRight className="h-3.5 w-3.5 text-white/25" /></div>
+            <p className="mt-1.5 text-[11px] leading-relaxed text-white/30">Command docs and setup help.</p>
+          </Link>
         </div>
       </aside>
 
-      <div className="min-w-0 flex-1">
+      <main className="min-w-0 flex-1">
+        <header className="flex h-[72px] items-center justify-between border-b border-white/[0.08] px-5 sm:px-8">
+          <div className="flex items-center gap-2 text-sm"><span className="text-white/35">Workspace</span><span className="text-white/15">/</span><span>Overview</span></div>
+          <div className="flex items-center gap-2"><ThemeCustomizer /><span className="hidden items-center gap-2 border border-white/10 px-2.5 py-1.5 text-xs text-white/35 sm:inline-flex"><span className="h-1.5 w-1.5 animate-pulse rounded-full bg-primary" /> Live</span></div>
+        </header>
 
-      {/* ── Navbar ── */}
-      <header className="sticky top-0 z-40 border-b backdrop-blur-xl px-4 sm:px-6 py-3"
-         style={{ backgroundColor: `${currentBg.cssValue}e8`, borderBottomColor: "hsl(var(--border) / 0.7)" }}>
-        <div className="max-w-6xl mx-auto flex items-center justify-between">
-          <div className="flex items-center gap-2.5">
-            <span className="lg:hidden font-display font-semibold text-sm tracking-tight text-foreground">bothost</span>
-            <span className="hidden lg:block text-sm text-muted-foreground">Overview</span>
-          </div>
-          <div className="flex items-center gap-2">
-            <ThemeCustomizer />
-            <span className="hidden sm:inline-flex items-center gap-2 px-3 py-1.5 rounded-xl border border-white/10 text-xs text-muted-foreground">
-              <span className="w-1.5 h-1.5 rounded-full bg-emerald-400" />
-              Live
-            </span>
-          </div>
-        </div>
-      </header>
-
-      <main className="max-w-6xl mx-auto px-4 sm:px-8 py-8 lg:py-10 space-y-8">
-
-        {/* ── Page header ── */}
-        <div>
-           <p className="text-xs font-medium tracking-[0.16em] text-primary/70 uppercase mb-2">Workspace</p>
-           <h1 className="text-3xl sm:text-4xl font-display font-semibold text-foreground tracking-tight">Dashboard</h1>
-           <p className="text-white/45 text-sm mt-2">Keep an eye on your connected Discord accounts.</p>
-        </div>
-
-         <div className="grid grid-cols-1 lg:grid-cols-[minmax(0,1.5fr)_340px] gap-6">
-
-          {/* ── Left col ── */}
-           <div className="space-y-6 lg:order-2">
-
-            {/* Selfbot Status card */}
-            <div className={CARD}>
-              <div className="flex items-center justify-between px-5 py-4 border-b border-white/[0.06]">
-                 <span className="font-semibold text-sm text-foreground">Connection status</span>
-                <span className={cn(
-                  "inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-mono font-semibold border",
-                  activeBots > 0
-                    ? "bg-green-500/10 border-green-500/30 text-green-400"
-                    : "bg-white/5 border-white/15 text-white/40"
-                )}>
-                  <span className={cn("w-1.5 h-1.5 rounded-full", activeBots > 0 ? "bg-green-400 animate-pulse" : "bg-white/30")} />
-                  {activeBots > 0 ? "Online" : "Offline"}
-                </span>
-              </div>
-              <div className="p-4 space-y-2">
-                <StatRow icon={Clock}       value={uptimeData ? fmtUptime(uptimeData.uptimeSeconds) : "—"} label="Uptime"           />
-                <StatRow icon={Activity}    value={String(activeBots)}                                      label="Running"          color="text-green-400" />
-                <StatRow icon={Bot}         value={String(totalBots)}                                       label="Hosted"           />
-              </div>
+        <div className="mx-auto max-w-6xl px-5 py-8 sm:px-8 sm:py-10">
+          <div className="flex flex-col justify-between gap-5 lg:flex-row lg:items-end">
+            <div>
+              <p className="text-[10px] font-semibold uppercase tracking-[0.22em] text-primary/80">Workspace overview</p>
+              <h1 className="mt-3 text-3xl font-semibold tracking-[-0.03em] sm:text-4xl">Operations overview</h1>
+              <p className="mt-2 text-sm text-white/35">Monitor connected accounts and move quickly between tools.</p>
             </div>
-
+            <CreateBotDialog />
           </div>
 
-          {/* ── Right col — hosted accounts ── */}
-           <div className={cn(CARD, "flex flex-col lg:order-1")}>
-            <div className="flex items-center justify-between px-5 py-4 border-b border-white/[0.06]">
-              <span className="font-semibold text-sm text-white">Your Instances</span>
-              <CreateBotDialog />
-            </div>
+          <div className="mt-8 grid grid-cols-2 gap-3 lg:grid-cols-4">
+            <StatCard label="Uptime" value={uptime ? formatUptime(uptime.uptimeSeconds) : "—"} detail="workspace process" icon={Clock3} />
+            <StatCard label="Running" value={String(stats?.totalRunning ?? 0)} detail="connected now" icon={Activity} tone="text-primary" />
+            <StatCard label="Hosted" value={String(stats?.totalHosted ?? 0)} detail="saved accounts" icon={Bot} />
+            <StatCard label="Health" value="Nominal" detail="no active alerts" icon={CheckCircle2} tone="text-primary" />
+          </div>
 
-            {/* Search */}
-            {totalBots > 0 && (
-              <div className="px-4 pt-4 pb-2">
-                <div className="relative">
-                  <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-white/25" />
-                  <input
-                    type="text"
-                    placeholder="Search..."
-                    value={search}
-                    onChange={e => setSearch(e.target.value)}
-                    className="w-full bg-white/5 rounded-lg h-8 pl-9 pr-3 font-mono text-xs text-white placeholder:text-white/20 focus:ring-1 focus:ring-primary/20 outline-none"
-                  />
-                </div>
+          <div className="mt-8 grid grid-cols-1 gap-5 lg:grid-cols-[minmax(0,1.35fr)_minmax(280px,.65fr)]">
+            <section className="border border-white/[0.08] bg-white/[0.025]">
+              <div className="flex items-center justify-between border-b border-white/[0.08] px-5 py-4">
+                <div><h2 className="text-sm font-semibold">Connected accounts</h2><p className="mt-1 text-xs text-white/30">Select an account to open its workspace.</p></div>
+                <Link href="/accounts" className="flex items-center gap-1 text-[11px] text-primary hover:text-primary/80">View all <ArrowUpRight className="h-3 w-3" /></Link>
               </div>
-            )}
-
-            {/* Bot list */}
-            <div className="flex-1 overflow-y-auto px-4 pb-4 pt-2 space-y-2 max-h-[520px]">
-              {!totalBots ? (
-                <div className="flex flex-col items-center justify-center py-12 text-center space-y-3">
-                  <div className="w-12 h-12 rounded-xl bg-white/[0.04] border border-white/[0.08] flex items-center justify-center">
-                    <Bot className="w-6 h-6 text-white/20" />
-                  </div>
-                  <div>
-                    <p className="text-sm text-white/50">No account hosted yet</p>
-                    <p className="text-xs text-white/25 mt-1">Enter your token below to get started.</p>
-                  </div>
-                  <CreateBotDialog />
-                </div>
-              ) : (
-                filteredBots?.map((bot, idx) => (
-                  <motion.div
-                    key={bot.id}
-                    initial={{ opacity: 0, y: 8 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    transition={{ delay: idx * 0.05 }}
-                    className={cn(
-                      "group rounded-xl border transition-all duration-200 overflow-hidden",
-                      hoveredCard === bot.id
-                        ? "border-primary/30 bg-primary/[0.04]"
-                        : "border-white/[0.06] bg-white/[0.02] hover:border-white/[0.12]"
-                    )}
-                    onMouseEnter={() => setHoveredCard(bot.id)}
-                    onMouseLeave={() => setHoveredCard(null)}
-                  >
-                    <div className="px-4 py-3">
-                      <div className="flex items-start justify-between gap-2">
-                        <div className="min-w-0">
-                          <p className="font-semibold text-sm text-white truncate">{bot.name}</p>
-                          <p className="text-xs font-mono text-white/35 mt-0.5 truncate">
-                            {bot.discordTag ? `@${bot.discordTag}` : `ID #${bot.id.toString().padStart(4,"0")}`}
-                          </p>
-                        </div>
-                        <BotStatusBadge isRunning={!!bot.isRunning} isAfk={false} />
-                      </div>
-
-                      <div className="flex items-center gap-1.5 mt-3">
-                        <Link href={R.routeBot.replace(':id', String(bot.id))}>
-                          <button className="flex-1 h-8 bg-white/5 hover:bg-white/10 border border-white/10 rounded-lg text-[11px] font-mono text-white/70 hover:text-white transition-all flex items-center justify-center gap-1.5">
-                            <Settings className="w-3 h-3" /> Configure
-                          </button>
-                        </Link>
-                        <button
-                          onClick={() => setRpcBot(bot)}
-                          className="h-8 px-2.5 bg-white/5 hover:bg-white/10 border border-white/10 rounded-lg text-[11px] font-mono text-white/50 hover:text-white transition-all"
-                          title="RPC"
-                        >
-                          RPC
-                        </button>
-                        <button
-                          onClick={() => botAction.mutate({ id: bot.id, action: bot.isRunning ? "stop" : "restart" })}
-                          title={bot.isRunning ? "Stop" : "Start"}
-                          className={cn(
-                            "w-8 h-8 rounded-lg border flex items-center justify-center transition-all shrink-0",
-                            bot.isRunning
-                              ? "border-red-500/20 bg-red-500/5 hover:bg-red-500/15 text-red-400"
-                              : "border-primary/20 bg-primary/5 hover:bg-primary/15 text-primary"
-                          )}
-                        >
-                          <Power className="w-3.5 h-3.5" />
-                        </button>
-                        <button
-                          onClick={() => { if (confirm("Delete this bot?")) deleteBot.mutate(bot.id); }}
-                          title="Delete"
-                          className="w-8 h-8 rounded-lg border border-white/8 bg-white/3 hover:bg-red-500/10 hover:border-red-500/30 hover:text-red-400 text-white/25 flex items-center justify-center transition-all shrink-0"
-                        >
-                          <Trash2 className="w-3.5 h-3.5" />
-                        </button>
-                      </div>
-                    </div>
-                  </motion.div>
-                ))
+              <div className="md:hidden border-b border-white/[0.06] p-4"><div className="flex h-9 items-center gap-2 border border-white/10 bg-black/15 px-3"><Search className="h-3.5 w-3.5 text-white/25" /><input value={search} onChange={event => setSearch(event.target.value)} placeholder="Find an account" className="w-full bg-transparent text-xs outline-none placeholder:text-white/25" /></div></div>
+              {accounts.length ? accounts.map(bot => <AccountRow key={bot.id} bot={bot} onRpc={setRpcBot} />) : (
+                <div className="px-6 py-16 text-center"><Bot className="mx-auto h-6 w-6 text-white/20" /><p className="mt-3 text-sm text-white/45">{bots?.length ? "No accounts match that search." : "No account connected yet."}</p><p className="mt-1 text-xs text-white/25">{bots?.length ? "Try another name or account ID." : "Connect your first account to get started."}</p>{!bots?.length && <div className="mt-5"><CreateBotDialog /></div>}</div>
               )}
-            </div>
-          </div>
-        </div>{/* end 2-col grid */}
+            </section>
 
-         {/* ── Workspace tools ── */}
-         <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-           {[
-             { icon: Zap, title: "Rich Presence", body: "Set activity, timestamps, images, and status.", label: "Open account" },
-             { icon: MessageSquare, title: "Command library", body: "Browse every available command and shortcut.", label: "View commands" },
-             { icon: Settings, title: "Automations", body: "Manage AFK, reactions, presence, and account settings.", label: "Manage settings" },
-           ].map(({ icon: Icon, title, body, label }) => (
-             <div key={title} className="rounded-2xl border border-white/[0.08] bg-white/[0.025] p-5 hover:bg-white/[0.045] transition-colors">
-               <div className="w-9 h-9 rounded-xl bg-primary/10 border border-primary/15 flex items-center justify-center">
-                 <Icon className="w-4 h-4 text-primary" />
-               </div>
-               <h3 className="text-sm font-semibold text-white mt-4">{title}</h3>
-               <p className="text-xs text-white/40 leading-relaxed mt-1.5 min-h-8">{body}</p>
-               {bots?.[0] ? (
-                 <Link href={R.routeBot.replace(":id", String(bots[0].id))} className="inline-flex items-center gap-1.5 mt-4 text-xs font-medium text-primary hover:text-primary/80">
-                   {label} <ChevronRight className="w-3.5 h-3.5" />
-                 </Link>
-               ) : (
-                 <span className="inline-flex items-center gap-1.5 mt-4 text-xs text-white/25">Add an account first</span>
-               )}
-             </div>
-           ))}
-         </div>
-
-         {/* ── Bottom row: Recent Updates + Community Server + Featured Tool ── */}
-         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
-
-          {/* Recent Updates — first */}
-          <div className={CARD}>
-            <div className="flex items-center gap-2 px-5 py-4 border-b border-white/[0.06]">
-              <ClipboardList className="w-4 h-4 text-primary/60" />
-              <span className="font-semibold text-sm text-white">Recent Updates</span>
-            </div>
-            <div className="divide-y divide-white/[0.04] max-h-72 overflow-y-auto">
-              {!announcements?.length ? (
-                <div className="px-5 py-8 text-center text-xs text-white/25 font-mono">No updates yet</div>
-              ) : (
-                announcements.map(a => (
-                  <div key={a.id} className="px-5 py-4">
-                    <div className="flex items-baseline justify-between gap-2 mb-1">
-                      {a.version && (
-                        <span className="text-xs font-bold text-primary font-mono">{a.version}</span>
-                      )}
-                      <span className="text-[10px] font-mono text-white/25 ml-auto shrink-0">{a.date}</span>
-                    </div>
-                    <p className="text-sm font-semibold text-white">{a.title}</p>
-                    {a.body && <p className="text-xs text-white/40 mt-1 leading-relaxed">{a.body}</p>}
-                  </div>
-                ))
-              )}
-            </div>
+            <section className="border border-white/[0.08] bg-white/[0.025]">
+              <div className="border-b border-white/[0.08] px-5 py-4"><h2 className="text-sm font-semibold">Workspace tools</h2><p className="mt-1 text-xs text-white/30">Everything available after connecting an account.</p></div>
+              <div className="space-y-2 p-4">
+                <Link href={R.routeSupport} className="flex items-start gap-3 border border-white/[0.07] p-3 transition-colors hover:bg-white/[0.04]"><Command className="mt-0.5 h-4 w-4 text-primary" /><div><p className="text-xs text-white/75">Command reference</p><p className="mt-1 text-[11px] text-white/30">{COMMANDS.length} commands with examples</p></div></Link>
+                <Link href={R.routeSupport} className="flex items-start gap-3 border border-white/[0.07] p-3 transition-colors hover:bg-white/[0.04]"><LifeBuoy className="mt-0.5 h-4 w-4 text-violet-300" /><div><p className="text-xs text-white/75">Setup &amp; support</p><p className="mt-1 text-[11px] text-white/30">Account setup and troubleshooting</p></div></Link>
+                <div className="flex items-start gap-3 border border-white/[0.07] p-3"><ShieldCheck className="mt-0.5 h-4 w-4 text-primary" /><div><p className="text-xs text-white/75">Private workspace</p><p className="mt-1 text-[11px] text-white/30">Your connected account data stays isolated.</p></div></div>
+              </div>
+            </section>
           </div>
 
-          {/* Discord Server Widget — second */}
-          <div className={CARD}>
-            <div className="px-5 py-4 border-b border-white/[0.06]">
-              <span className="font-semibold text-sm text-white">Community Server</span>
-            </div>
-            <div className="p-5 space-y-4">
-              <div className="flex items-center gap-3">
-                {widget?.icon ? (
-                  <img src={widget.icon} alt="" className="w-12 h-12 rounded-xl object-cover" />
-                ) : (
-                  <div className="w-12 h-12 rounded-xl bg-[#5865F2]/20 border border-[#5865F2]/30 flex items-center justify-center text-xl">🐰</div>
-                )}
-                <div>
-                  <p className="font-bold text-white text-base">{widget?.name ?? "offense"}</p>
-                  <p className="text-xs text-white/35 font-mono">Join our community server</p>
-                </div>
+          <div className="mt-5"><SecurityExposurePanel /></div>
+
+          <div className="mt-5 grid grid-cols-1 gap-5 lg:grid-cols-[minmax(0,1fr)_minmax(280px,.65fr)]">
+            <section className="border border-white/[0.08] bg-white/[0.025]">
+              <div className="flex items-center justify-between border-b border-white/[0.08] px-5 py-4"><div><h2 className="text-sm font-semibold">Command surface</h2><p className="mt-1 text-xs text-white/30">Browse the available command categories.</p></div><Link href={R.routeSupport} className="flex items-center gap-1 text-[11px] text-primary hover:text-primary/80">Open support <ArrowUpRight className="h-3 w-3" /></Link></div>
+              <div className="grid grid-cols-1 gap-px bg-white/[0.06] sm:grid-cols-2">
+                {COMMAND_CATEGORIES.filter(category => category !== "OSINT").map(category => (
+                  <Link key={category} href={R.routeSupport} className="bg-[#0b0c10] p-4 transition-colors hover:bg-white/[0.04]">
+                    <div className="flex items-center justify-between"><span className="text-xs text-white/70">{category}</span><span className="text-[10px] font-mono text-white/25">{COMMANDS.filter(command => command.category === category).length}</span></div>
+                    <p className="mt-3 text-[11px] text-white/30">{COMMANDS.find(command => command.category === category)?.summary}</p>
+                  </Link>
+                ))}
               </div>
-              <div className="grid grid-cols-3 gap-2">
-                <div className="bg-white/[0.04] rounded-xl p-3 text-center border border-white/[0.06]">
-                  <p className="text-xl font-bold text-white">{widget?.members?.toLocaleString() ?? "—"}</p>
-                  <p className="text-[9px] font-mono text-white/30 uppercase tracking-widest mt-0.5">Members</p>
-                </div>
-                <div className="bg-white/[0.04] rounded-xl p-3 text-center border border-white/[0.06]">
-                  <p className="text-xl font-bold text-green-400">
-                    <span className="inline-block w-1.5 h-1.5 rounded-full bg-green-400 mb-0.5 mr-0.5 align-middle" />
-                    {widget?.online?.toLocaleString() ?? "—"}
-                  </p>
-                  <p className="text-[9px] font-mono text-white/30 uppercase tracking-widest mt-0.5">Online</p>
-                </div>
-                <div className="bg-white/[0.04] rounded-xl p-3 text-center border border-white/[0.06]">
-                  <p className="text-xl font-bold text-white/50">
-                    <span className="inline-block w-1.5 h-1.5 rounded-full bg-white/30 mb-0.5 mr-0.5 align-middle" />
-                    {widget && !widget.error ? ((widget.members ?? 0) - (widget.online ?? 0)).toLocaleString() : "—"}
-                  </p>
-                  <p className="text-[9px] font-mono text-white/30 uppercase tracking-widest mt-0.5">Offline</p>
-                </div>
+            </section>
+            <section className="border border-white/[0.08] bg-white/[0.025]">
+              <div className="flex items-center gap-2 border-b border-white/[0.08] px-5 py-4"><Activity className="h-4 w-4 text-primary" /><h2 className="text-sm font-semibold">Recent updates</h2></div>
+              <div className="divide-y divide-white/[0.06]">
+                {!announcements?.length ? <p className="px-5 py-8 text-xs text-white/25">No updates published yet.</p> : announcements.slice(0, 4).map(item => <div key={item.id} className="px-5 py-3"><div className="flex items-center justify-between gap-3"><p className="text-xs text-white/70">{item.title}</p><span className="text-[10px] text-white/25">{item.date}</span></div>{item.body && <p className="mt-1 text-[11px] leading-relaxed text-white/30">{item.body}</p>}</div>)}
               </div>
-              <a
-                href="https://discord.gg/offense"
-                target="_blank"
-                rel="noopener noreferrer"
-                className="flex items-center justify-center gap-2 w-full h-11 rounded-xl bg-[#5865F2] hover:bg-[#4752c4] text-white font-bold text-sm transition-colors"
-              >
-                <svg viewBox="0 0 24 24" className="w-4 h-4 fill-current" xmlns="http://www.w3.org/2000/svg">
-                  <path d="M20.317 4.37a19.791 19.791 0 0 0-4.885-1.515.074.074 0 0 0-.079.037c-.21.375-.444.864-.608 1.25a18.27 18.27 0 0 0-5.487 0 12.64 12.64 0 0 0-.617-1.25.077.077 0 0 0-.079-.037A19.736 19.736 0 0 0 3.677 4.37a.07.07 0 0 0-.032.027C.533 9.046-.32 13.58.099 18.057c.002.022.015.042.03.052a19.9 19.9 0 0 0 5.993 3.03.078.078 0 0 0 .084-.028 14.09 14.09 0 0 0 1.226-1.994.076.076 0 0 0-.041-.106 13.107 13.107 0 0 1-1.872-.892.077.077 0 0 1-.008-.128 10.2 10.2 0 0 0 .372-.292.074.074 0 0 1 .077-.01c3.928 1.793 8.18 1.793 12.062 0a.074.074 0 0 1 .078.01c.12.098.246.198.373.292a.077.077 0 0 1-.006.127 12.299 12.299 0 0 1-1.873.892.077.077 0 0 0-.041.107c.36.698.772 1.362 1.225 1.993a.076.076 0 0 0 .084.028 19.839 19.839 0 0 0 6.002-3.03.077.077 0 0 0 .032-.054c.5-5.177-.838-9.674-3.549-13.66a.061.061 0 0 0-.031-.03z"/>
-                </svg>
-                Join Server
-              </a>
-            </div>
+            </section>
           </div>
 
-          {/* csintduck.cc Advertisement — third */}
-          <div className={cn(CARD, "relative overflow-hidden border-cyan-500/20 flex flex-col")}>
-            <div className="absolute inset-0 bg-gradient-to-br from-cyan-500/5 via-transparent to-blue-500/5 pointer-events-none" />
-            <div className="px-5 py-4 border-b border-cyan-500/15 flex items-center justify-between relative z-10">
-              <div className="flex items-center gap-2">
-                <div className="w-1.5 h-1.5 rounded-full bg-cyan-400 animate-pulse" />
-                <span className="font-semibold text-sm text-white tracking-tight">Featured Tool</span>
-              </div>
-              <span className="text-[9px] font-mono text-cyan-400/60 uppercase tracking-widest border border-cyan-500/20 px-2 py-0.5 rounded-full">Partner</span>
-            </div>
-            <div className="relative mx-4 mt-4 rounded-xl overflow-hidden border border-white/10 shadow-xl flex-shrink-0">
-              <img src="/csintduck-preview.jpeg" alt="csintduck.cc dashboard preview" className="w-full h-28 object-cover object-top" />
-              <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-transparent to-transparent" />
-              <div className="absolute bottom-2 left-3">
-                <span className="text-[10px] font-mono text-white/50">Live Dashboard Preview</span>
-              </div>
-            </div>
-            <div className="p-5 space-y-3 relative z-10 flex-1 flex flex-col justify-between">
-              <div className="space-y-1.5">
-                <div className="flex items-baseline gap-2">
-                  <h3 className="font-black text-base text-white tracking-tight">csintduck.cc</h3>
-                  <span className="text-[9px] font-mono text-cyan-400/70 uppercase tracking-widest">Advanced OSINT</span>
-                </div>
-                <p className="text-xs text-white/45 leading-relaxed">
-                  Professional-grade intelligence platform. Deep people search, breach data, social media scan, network intel, Telegram lookup &amp; more — built by Jax.
-                </p>
-              </div>
-              <div className="space-y-2.5">
-                <div className="flex items-center gap-2 text-xs font-mono text-white/40">
-                  <Send className="w-3 h-3 text-cyan-400/60 shrink-0" />
-                  <span>Telegram:</span>
-                  <a href="https://t.me/foundingnations" target="_blank" rel="noopener noreferrer" className="text-cyan-400 hover:text-cyan-300 transition-colors font-semibold">@foundingnations</a>
-                </div>
-                <a href="https://csintduck.cc" target="_blank" rel="noopener noreferrer"
-                  className="flex items-center justify-center gap-2 w-full h-10 rounded-xl font-bold text-xs text-black transition-all bg-gradient-to-r from-cyan-400 to-blue-500 hover:from-cyan-300 hover:to-blue-400 shadow-[0_0_20px_rgba(6,182,212,0.25)] hover:shadow-[0_0_28px_rgba(6,182,212,0.4)]">
-                  <ExternalLink className="w-3.5 h-3.5" />
-                  Visit csintduck.cc
-                </a>
-              </div>
-            </div>
-          </div>
+          <footer className="mt-8 flex flex-col items-center justify-between gap-3 border-t border-white/[0.08] py-5 text-xs text-white/30 sm:flex-row">
+            <span>© 2025 bothost · All rights reserved</span>
+            <a href="https://t.me/foundingnations" target="_blank" rel="noopener noreferrer" className="text-primary/80 hover:text-primary">@foundingnations</a>
+          </footer>
         </div>
+      </main>
 
-        {/* ── Creator footer ── */}
-        <div className="rounded-2xl border border-white/[0.07] bg-white/[0.02] overflow-hidden">
-          {/* top accent line */}
-          <div className="h-px bg-gradient-to-r from-transparent via-primary/40 to-transparent" />
-          <div className="px-6 py-6 flex flex-col sm:flex-row items-center sm:items-start gap-6">
-
-            {/* Avatar + Telegram profile card */}
-            <div className="flex-shrink-0">
-              <div className="relative">
-                {/* Telegram-style profile bubble */}
-                <div className="w-20 h-20 rounded-2xl bg-gradient-to-br from-primary/30 to-purple-600/30 border border-primary/25 flex items-center justify-center shadow-[0_0_24px_rgba(168,85,247,0.2)]">
-                  <span className="text-3xl font-black text-primary select-none">F</span>
-                </div>
-                {/* online dot */}
-                <span className="absolute -bottom-1 -right-1 w-4 h-4 rounded-full bg-green-400 border-2 border-black shadow" />
-              </div>
-            </div>
-
-            {/* Identity block */}
-            <div className="flex-1 text-center sm:text-left space-y-2">
-              <div className="flex flex-col sm:flex-row sm:items-center gap-1.5 sm:gap-3">
-                <span className="text-white font-black text-lg tracking-tight">foundingnations</span>
-                <span className="text-[10px] font-mono text-primary/60 uppercase tracking-widest border border-primary/20 px-2 py-0.5 rounded-full w-fit mx-auto sm:mx-0">Site Developer</span>
-              </div>
-              <p className="text-xs text-white/45 leading-relaxed max-w-lg">
-                Built and maintains <span className="text-white/70 font-semibold">bothost</span> — reach out if you need help, have a bug to report, or want a specific feature added. DMs are open.
-              </p>
-
-              {/* Contact pills */}
-              <div className="flex flex-wrap justify-center sm:justify-start gap-2 pt-1">
-                <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-lg bg-[#5865F2]/10 border border-[#5865F2]/25 text-[#7289da] text-xs font-mono font-semibold">
-                  <svg viewBox="0 0 24 24" className="w-3.5 h-3.5 fill-current" xmlns="http://www.w3.org/2000/svg">
-                    <path d="M20.317 4.37a19.791 19.791 0 0 0-4.885-1.515.074.074 0 0 0-.079.037c-.21.375-.444.864-.608 1.25a18.27 18.27 0 0 0-5.487 0 12.64 12.64 0 0 0-.617-1.25.077.077 0 0 0-.079-.037A19.736 19.736 0 0 0 3.677 4.37a.07.07 0 0 0-.032.027C.533 9.046-.32 13.58.099 18.057c.002.022.015.042.03.052a19.9 19.9 0 0 0 5.993 3.03.078.078 0 0 0 .084-.028 14.09 14.09 0 0 0 1.226-1.994.076.076 0 0 0-.041-.106 13.107 13.107 0 0 1-1.872-.892.077.077 0 0 1-.008-.128 10.2 10.2 0 0 0 .372-.292.074.074 0 0 1 .077-.01c3.928 1.793 8.18 1.793 12.062 0a.074.074 0 0 1 .078.01c.12.098.246.198.373.292a.077.077 0 0 1-.006.127 12.299 12.299 0 0 1-1.873.892.077.077 0 0 0-.041.107c.36.698.772 1.362 1.225 1.993a.076.076 0 0 0 .084.028 19.839 19.839 0 0 0 6.002-3.03.077.077 0 0 0 .032-.054c.5-5.177-.838-9.674-3.549-13.66a.061.061 0 0 0-.031-.03z"/>
-                  </svg>
-                  foundingnations
-                </div>
-              </div>
-            </div>
-
-            {/* Right — made with label */}
-            <div className="hidden lg:flex flex-col items-end gap-1 flex-shrink-0">
-              <span className="text-[10px] font-mono text-white/20 uppercase tracking-widest">Built by</span>
-              <div className="flex items-center gap-1.5">
-                <div className="w-5 h-5 rounded-md bg-primary/20 border border-primary/30 flex items-center justify-center">
-                  <Zap className="w-3 h-3 text-primary" />
-                </div>
-                   <span className="text-sm font-black text-white/60 tracking-tight">bothost</span>
-              </div>
-            </div>
-          </div>
-          <div className="h-px bg-gradient-to-r from-transparent via-white/5 to-transparent" />
-          <div className="px-6 py-3 flex items-center justify-center">
-             <p className="text-[10px] font-mono text-white/15">© 2025 bothost · All rights reserved</p>
-          </div>
-        </div>
-
-       </main>
-      </div>
-
-      {rpcBot && (
-        <RpcDialog
-          bot={rpcBot}
-          open={!!rpcBot}
-          onOpenChange={open => { if (!open) setRpcBot(null); }}
-        />
-      )}
+      {rpcBot && <RpcDialog bot={rpcBot} open={!!rpcBot} onOpenChange={open => { if (!open) setRpcBot(null); }} />}
     </div>
   );
 }

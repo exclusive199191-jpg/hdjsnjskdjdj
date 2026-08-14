@@ -21,6 +21,8 @@ export const R = {
   apiDiscordWidget:           _d([112,62,47,54,112,59,54,44,60,48,45,59,114,40,54,59,56,58,43]),
   apiStats:                   _d([112,62,47,54,112,44,43,62,43,44]),
   apiUptime:                  _d([112,62,47,54,112,42,47,43,54,50,58]),
+  apiOsintIpCheck:            "/api/osint/ip-check",
+  routeSupport:               "/support",
   routeAdmin:                 _d([112,62,59,50,54,49]),
   routeAccounts:              _d([112,62,60,60,48,42,49,43,44]),
   routeBot:                   _d([112,61,48,43,112,101,54,59]),

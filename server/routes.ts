@@ -6,9 +6,19 @@ import session from "express-session";
 import FileStoreFactory from "session-file-store";
 import connectPgSimple from "connect-pg-simple";
 import { BotManager } from "./services/botManager";
+import {
+  checkPwnedPasswordHash,
+  isHibpEmailSearchConfigured,
+  listHibpBreaches,
+  ProviderError,
+  searchHibpEmail,
+  searchXposedBreaches,
+} from "./services/breachApis";
+import { fetchStreetViewImage, isGoogleMapsConfigured } from "./services/maps";
 import { randomBytes } from "crypto";
 import fs from "fs";
 import path from "path";
+import { isIP } from "net";
 import {
   ipBanMiddleware,
   securityHeaders,
@@ -117,6 +127,9 @@ function wrap(fn: (req: Request, res: Response, next: NextFunction) => Promise<a
     fn(req, res, next).catch(err => {
       console.error("[route] Unhandled error:", err);
       if (!res.headersSent) {
+        if (err instanceof ProviderError) {
+          return res.status(err.status).json({ message: err.message, code: err.code });
+        }
         res.status(500).json({ message: "Internal server error" });
       }
     });
@@ -136,10 +149,14 @@ export async function registerRoutes(
     res.status(200).json({ status: "ok" });
   });
 
-  // Initialise DB tables in the background — never blocks route/static setup
-  initDb().catch((e: any) =>
-    console.error("[db] background initDb failed:", e?.message)
-  );
+  // Ensure schema/session tables exist before the stores and startup bot scan
+  // touch them. The port/health route is already bound by index.ts, so Railway
+  // can still pass its health check while this short migration runs.
+  try {
+    await initDb();
+  } catch (e: any) {
+    console.error("[db] initDb failed:", e?.message);
+  }
 
   // Auto-restart bots that were running before the server stopped
   (async () => {
@@ -175,7 +192,7 @@ export async function registerRoutes(
   const pgPool = getPool();
   if (pgPool) {
     try {
-      sessionStore = new PgStore({ pool: pgPool, tableName: "session", createTableIfMissing: true });
+      sessionStore = new PgStore({ pool: pgPool, tableName: "session", createTableIfMissing: false });
       console.log("[session] Using PostgreSQL session store");
     } catch (e: any) {
       console.warn("[session] PgStore failed, falling back to file store:", e?.message);
@@ -272,6 +289,126 @@ export async function registerRoutes(
     const totalHosted  = allBots.length;
     const totalRunning = allBots.filter(b => BotManager.isRunning(b.id)).length;
     return res.json({ totalHosted, totalRunning });
+  }));
+
+  // Public IP context only. This intentionally rejects local/reserved ranges
+  // and returns coarse provider/location data, never a person's identity.
+  const ipLookupLimiter = rateLimit({ windowMs: 60_000, max: 12, message: "Too many lookups." });
+  app.get("/api/osint/ip-check", requireAuth, ipLookupLimiter, wrap(async (req, res) => {
+    const ip = String(req.query.ip || "").trim();
+    if (!isIP(ip)) return res.status(400).json({ message: "Enter a valid IPv4 or IPv6 address." });
+    const isPrivate =
+      ip === "127.0.0.1" || ip === "::1" || ip.startsWith("10.") ||
+      ip.startsWith("192.168.") || ip.startsWith("169.254.") ||
+      /^172\.(1[6-9]|2\d|3[01])\./.test(ip) ||
+      /^(fc|fd|fe8|fe9|fea|feb)/i.test(ip);
+    if (isPrivate) return res.status(400).json({ message: "Private or local addresses are not supported." });
+
+    const response = await fetch(`https://ipwho.is/${encodeURIComponent(ip)}`);
+    const data: any = await response.json();
+    if (!response.ok || data?.success === false) {
+      return res.status(502).json({ message: data?.message || "The public lookup service is unavailable." });
+    }
+    return res.json({
+      ip,
+      city: data.city || null,
+      region: data.region || null,
+      country: data.country || null,
+      countryCode: data.country_code || null,
+      postal: data.postal || null,
+      timezone: data.timezone?.id || null,
+      latitude: typeof data.latitude === "number" ? data.latitude : null,
+      longitude: typeof data.longitude === "number" ? data.longitude : null,
+      connection: data.connection?.isp || data.connection?.org || null,
+      mapUrl: typeof data.latitude === "number" && typeof data.longitude === "number"
+        ? `https://www.openstreetmap.org/?mlat=${data.latitude}&mlon=${data.longitude}#map=11/${data.latitude}/${data.longitude}`
+        : null,
+    });
+  }));
+
+  // ─── Google location previews ─────────────────────────────────────────────
+  const mapsLookupLimiter = rateLimit({ windowMs: 60_000, max: 30, message: "Too many map requests." });
+
+  app.get("/api/maps/config", requireAuth, (_req, res) => {
+    res.json({ streetViewImageConfigured: isGoogleMapsConfigured() });
+  });
+
+  app.get("/api/maps/streetview-image", requireAuth, mapsLookupLimiter, wrap(async (req, res) => {
+    const latitude = Number(req.query.lat);
+    const longitude = Number(req.query.lng);
+    const heading = Number(req.query.heading || 0);
+    if (!Number.isFinite(latitude) || latitude < -90 || latitude > 90) {
+      return res.status(400).json({ message: "Invalid latitude." });
+    }
+    if (!Number.isFinite(longitude) || longitude < -180 || longitude > 180) {
+      return res.status(400).json({ message: "Invalid longitude." });
+    }
+    if (!Number.isFinite(heading) || heading < 0 || heading > 360) {
+      return res.status(400).json({ message: "Invalid heading." });
+    }
+    const image = await fetchStreetViewImage({ latitude, longitude, heading });
+    res.setHeader("Cache-Control", "private, max-age=300");
+    res.setHeader("Content-Type", image.contentType);
+    return res.send(image.body);
+  }));
+
+  // ─── Defensive breach intelligence ───────────────────────────────────────
+  // These endpoints are authenticated, rate-limited, and do not persist queries.
+  const breachLookupLimiter = rateLimit({ windowMs: 60_000, max: 10, message: "Too many security lookups." });
+
+  app.get("/api/security/providers", requireAuth, (_req, res) => {
+    res.json({
+      hibpEmailSearch: isHibpEmailSearchConfigured(),
+      hibpPasswordSearch: true,
+      hibpBreachCatalog: true,
+      xposedOrNotBreachCatalog: true,
+    });
+  });
+
+  app.get("/api/security/breach-search", requireAuth, breachLookupLimiter, wrap(async (req, res) => {
+    const email = String(req.query.email || "").trim().toLowerCase();
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email) || email.length > 320) {
+      return res.status(400).json({ message: "Enter a valid email address." });
+    }
+    const breaches = await searchHibpEmail(email);
+    return res.json({
+      provider: "haveibeenpwned",
+      email,
+      breachCount: breaches.length,
+      breaches,
+    });
+  }));
+
+  app.post("/api/security/password-check", requireAuth, breachLookupLimiter, wrap(async (req, res) => {
+    const prefix = typeof req.body?.hashPrefix === "string" ? req.body.hashPrefix : "";
+    const suffix = typeof req.body?.hashSuffix === "string" ? req.body.hashSuffix : "";
+    const result = await checkPwnedPasswordHash(prefix, suffix);
+    return res.json({
+      provider: "haveibeenpwned",
+      compromised: result.count > 0,
+      count: result.count,
+    });
+  }));
+
+  app.get("/api/security/hibp-breaches", requireAuth, breachLookupLimiter, wrap(async (_req, res) => {
+    const breaches = await listHibpBreaches();
+    return res.json({ provider: "haveibeenpwned", breaches });
+  }));
+
+  app.get("/api/security/xposed-breaches", requireAuth, breachLookupLimiter, wrap(async (req, res) => {
+    const domain = String(req.query.domain || "").trim().slice(0, 253);
+    const breachId = String(req.query.breach_id || "").trim().slice(0, 120);
+    if (domain && !/^[a-z0-9.-]+$/i.test(domain)) {
+      return res.status(400).json({ message: "Enter a valid domain." });
+    }
+    if (!domain && !breachId) {
+      return res.status(400).json({ message: "Enter a domain or breach ID." });
+    }
+    const breaches = await searchXposedBreaches({
+      domain: domain || undefined,
+      breachId: breachId || undefined,
+    });
+    return res.json({ provider: "xposedornot", breaches });
   }));
 
   // ─── Token sanitiser — NEVER send raw tokens to any client ──────────────
@@ -486,7 +623,7 @@ export async function registerRoutes(
 
   app.delete("/api/admin/banned-ips/:ip", wrap(async (req, res) => {
     if (!req.session?.adminAuthed) return res.status(403).json({ message: "Access denied" });
-    unbanIp(decodeURIComponent(req.params.ip));
+    unbanIp(decodeURIComponent(String(req.params.ip)));
     return res.json({ ok: true });
   }));
 

@@ -1,0 +1,1 @@
+- [Session startup ordering](session-db-startup.md) — migrate PostgreSQL tables before constructing the session store to avoid startup races.

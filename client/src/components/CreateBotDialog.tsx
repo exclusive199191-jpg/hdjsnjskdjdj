@@ -200,6 +200,7 @@ export function CreateBotDialog() {
             label="Discord Token"
             type="password"
             placeholder="Your user token"
+            autoComplete="off"
             {...form.register("token")}
             error={form.formState.errors.token?.message}
           />
