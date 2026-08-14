@@ -17,7 +17,7 @@ export function userIdHeaders(): Record<string, string> {
 }
 
 export function useSession() {
-  return useQuery<{ id: string }>({
+  return useQuery<{ id: string; username?: string } | null>({
     queryKey: [R.apiAuthInit],
     queryFn: async () => {
       const storedId = getUserId();
@@ -25,8 +25,9 @@ export function useSession() {
         credentials: "include",
         headers: storedId ? { "X-User-Id": storedId } : {},
       });
+      if (res.status === 401) return null;
       if (!res.ok) throw new Error("Failed to initialize session");
-      const data: { id: string } = await res.json();
+      const data: { id: string; username?: string } = await res.json();
       try {
         localStorage.setItem(STORAGE_KEY, data.id);
       } catch {}

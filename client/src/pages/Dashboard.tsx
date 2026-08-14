@@ -12,19 +12,23 @@ import {
   LifeBuoy,
   Loader2,
   LayoutDashboard,
+  LogOut,
   Power,
   Search,
   Settings2,
   ShieldCheck,
   Trash2,
+  UserRound,
   UsersRound,
 } from "lucide-react";
 import { useBots, useBotAction, useDeleteBot } from "@/hooks/use-bots";
 import { CreateBotDialog } from "@/components/CreateBotDialog";
 import { RpcDialog } from "@/components/RpcDialog";
 import { SecurityExposurePanel } from "@/components/SecurityExposurePanel";
+import { IpReportPanel } from "@/components/IpReportPanel";
 import { ThemeCustomizer } from "@/components/ThemeCustomizer";
 import { useTheme } from "@/hooks/use-theme";
+import { useAuth, useLogout } from "@/hooks/use-auth";
 import { R } from "@/lib/r";
 import { COMMANDS, COMMAND_CATEGORIES } from "@/lib/commands";
 import { cn } from "@/lib/utils";
@@ -102,6 +106,8 @@ function AccountRow({ bot, onRpc }: { bot: BotConfig; onRpc: (bot: BotConfig) =>
 
 export default function Dashboard() {
   const { currentBg } = useTheme();
+  const { data: user } = useAuth();
+  const logout = useLogout();
   const { data: bots, isLoading } = useBots();
   const [search, setSearch] = useState("");
   const [rpcBot, setRpcBot] = useState<BotConfig | null>(null);
@@ -169,7 +175,15 @@ export default function Dashboard() {
       <main className="min-w-0 flex-1">
         <header className="flex h-[72px] items-center justify-between border-b border-white/[0.08] px-5 sm:px-8">
           <div className="flex items-center gap-2 text-sm"><span className="text-white/35">Workspace</span><span className="text-white/15">/</span><span>Overview</span></div>
-          <div className="flex items-center gap-2"><ThemeCustomizer /><span className="hidden items-center gap-2 border border-white/10 px-2.5 py-1.5 text-xs text-white/35 sm:inline-flex"><span className="h-1.5 w-1.5 animate-pulse rounded-full bg-primary" /> Live</span></div>
+          <div className="flex items-center gap-2">
+            <ThemeCustomizer />
+            <span className="hidden items-center gap-2 border border-white/10 px-2.5 py-1.5 text-xs text-white/35 sm:inline-flex"><span className="h-1.5 w-1.5 animate-pulse rounded-full bg-primary" /> Live</span>
+            <div className="flex items-center gap-2 border border-white/10 px-2.5 py-1.5">
+              <UserRound className="h-3.5 w-3.5 text-primary/80" />
+              <span className="max-w-[110px] truncate text-xs text-white/55">{user?.username || "Account"}</span>
+              <button onClick={() => logout.mutate()} disabled={logout.isPending} title="Sign out" className="text-white/35 transition-colors hover:text-white disabled:opacity-40"><LogOut className="h-3.5 w-3.5" /></button>
+            </div>
+          </div>
         </header>
 
         <div className="mx-auto max-w-6xl px-5 py-8 pb-[calc(2rem+env(safe-area-inset-bottom))] sm:px-8 sm:py-10">
@@ -212,6 +226,7 @@ export default function Dashboard() {
           </div>
 
           <div className="mt-5"><SecurityExposurePanel /></div>
+          <div className="mt-5"><IpReportPanel /></div>
 
           <div className="mt-5 grid grid-cols-1 gap-5 lg:grid-cols-[minmax(0,1fr)_minmax(280px,.65fr)]">
             <section className="border border-white/[0.08] bg-white/[0.025]">

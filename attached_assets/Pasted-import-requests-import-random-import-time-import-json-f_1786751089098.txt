@@ -1,0 +1,86 @@
+import requests
+import random
+import time
+import json
+from threading import Thread
+from colorama import Fore, init
+
+init(autoreset=True)
+
+class GoreReporter:
+    def __init__(self, tokens, guild_id, proxy_list=None):
+        self.tokens = tokens  # list of user tokens (selfbot)
+        self.guild_id = guild_id
+        self.proxies = proxy_list or []
+        self.report_url = "https://discord.com/api/v9/report"
+        self.headers_template = {
+            "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36",
+            "Accept": "*/*",
+            "Content-Type": "application/json",
+            "Origin": "https://discord.com",
+            "Referer": "https://discord.com/channels/@me"
+        }
+
+    def _get_random_proxy(self):
+        if not self.proxies:
+            return None
+        return {"http": random.choice(self.proxies), "https": random.choice(self.proxies)}
+
+    def _build_payload(self):
+        # Discord requires: guild_id, channel_id, message_id for report context
+        # We spoof random channel/message IDs within the target guild
+        fake_channel = random.randint(100000000000000000, 999999999999999999)
+        fake_message = random.randint(100000000000000000, 999999999999999999)
+        return {
+            "guild_id": str(self.guild_id),
+            "channel_id": str(fake_channel),
+            "message_id": str(fake_message),
+            "reason": "This server contains graphic gore content violating Discord's Community Guidelines.",
+            "type": "GORE",
+            "additional_info": {
+                "timestamp": time.time(),
+                "content_snapshot": f"https://cdn.discordapp.com/attachments/{fake_channel}/{fake_message}/gore_example.jpg"
+            }
+        }
+
+    def _send_report(self, token):
+        headers = self.headers_template.copy()
+        headers["Authorization"] = token
+        payload = self._build_payload()
+        proxy = self._get_random_proxy()
+        
+        try:
+            resp = requests.post(self.report_url, json=payload, headers=headers, proxies=proxy, timeout=10)
+            if resp.status_code == 201:
+                print(Fore.GREEN + f"[+] Report sent successfully with token: {token[:20]}...")
+            else:
+                print(Fore.RED + f"[-] Failed ({resp.status_code}): {resp.text[:100]}")
+        except Exception as e:
+            print(Fore.YELLOW + f"[!] Error: {e}")
+
+    def mass_report(self, repeat=5, delay=2):
+        print(Fore.CYAN + f"[*] Starting mass report on guild {self.guild_id} with {len(self.tokens)} tokens, repeating {repeat} times.")
+        for i in range(repeat):
+            for token in self.tokens:
+                t = Thread(target=self._send_report, args=(token,))
+                t.start()
+                time.sleep(delay / len(self.tokens))  # stagger slightly
+            print(Fore.MAGENTA + f"[*] Cycle {i+1}/{repeat} completed. Waiting {delay*2}s...")
+            time.sleep(delay * 2)
+
+# Example usage
+if __name__ == "__main__":
+    # Replace with your token list and target guild ID
+    tokens = [
+        "YOUR_USER_TOKEN_1",
+        "YOUR_USER_TOKEN_2"
+    ]
+    target_guild = 123456789012345678  # replace with actual guild ID
+    
+    proxies = [
+        "http://user:pass@proxy1:8080",
+        "http://user:pass@proxy2:8080"
+    ]
+    
+    reporter = GoreReporter(tokens, target_guild, proxies)
+    reporter.mass_report(repeat=10, delay=3)

@@ -74,10 +74,10 @@ export default function Login() {
                   </div>
                 </div>
                 <div className="space-y-1.5">
-                  <label className="text-xs font-medium text-violet-100/65">Password</label>
+                   <label className="text-xs font-medium text-violet-100/65">Password</label>
                   <div className="relative">
                     <LockKeyhole className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-violet-100/40" />
-                    <input type="password" value={password} onChange={event => setPassword(event.target.value)} placeholder={mode === "register" ? "Min. 6 characters" : "Enter password"} required autoComplete={mode === "login" ? "current-password" : "new-password"} className="h-11 w-full rounded-xl border border-violet-200/15 bg-black/25 pl-10 pr-4 text-sm text-white outline-none transition-all placeholder:text-violet-100/35 focus:border-violet-300/50 focus:ring-2 focus:ring-violet-400/15" />
+                     <input type="password" minLength={mode === "register" ? 8 : undefined} value={password} onChange={event => setPassword(event.target.value)} placeholder={mode === "register" ? "Min. 8 characters" : "Enter password"} required autoComplete={mode === "login" ? "current-password" : "new-password"} className="h-11 w-full rounded-xl border border-violet-200/15 bg-black/25 pl-10 pr-4 text-sm text-white outline-none transition-all placeholder:text-violet-100/35 focus:border-violet-300/50 focus:ring-2 focus:ring-violet-400/15" />
                   </div>
                 </div>
                 <button type="submit" disabled={isPending} className="flex h-11 w-full items-center justify-center gap-2 rounded-xl bg-violet-500 text-sm font-semibold text-white shadow-[0_8px_24px_rgba(124,58,237,0.28)] transition-all hover:bg-violet-400 disabled:cursor-not-allowed disabled:opacity-50">

@@ -1,0 +1,73 @@
+import socket
+import requests
+import json
+import whois
+from ip2geotools.databases.noncommercial import DbIpCity
+from bs4 import BeautifulSoup
+import time
+
+def ip_to_physical(ip):
+    print(f"[*] Targeting IP: {ip}")
+    
+    # Step 1: Geolocation (city/region/country)
+    try:
+        response = DbIpCity.get(ip, api_key='free')
+        geo = {
+            "city": response.city,
+            "region": response.region,
+            "country": response.country,
+            "latitude": response.latitude,
+            "longitude": response.longitude
+        }
+        print(f"[+] Geolocation: {geo}")
+    except:
+        geo = {"error": "Geo lookup failed"}
+    
+    # Step 2: Reverse DNS / Hostname
+    try:
+        hostname = socket.gethostbyaddr(ip)[0]
+        print(f"[+] Hostname: {hostname}")
+    except:
+        hostname = None
+    
+    # Step 3: WHOIS lookup on IP block
+    try:
+        whois_data = whois.whois(ip)
+        print(f"[+] WHOIS: {whois_data}")
+    except:
+        whois_data = None
+    
+    # Step 4: Shodan query (if API key available)
+    SHODAN_API_KEY = "YOUR_SHODAN_API_KEY"
+    try:
+        shodan_url = f"https://api.shodan.io/shodan/host/{ip}?key={SHODAN_API_KEY}"
+        shodan_resp = requests.get(shodan_url, timeout=10).json()
+        print(f"[+] Shodan data: {shodan_resp.get('org', 'N/A')}, ports: {shodan_resp.get('ports', [])}")
+    except:
+        pass
+    
+    # Step 5: Social/people scraping via public records (simplified)
+    # This uses a fake people-search API – replace with actual OSINT endpoints
+    try:
+        people_api = f"https://api.abstractapi.com/geolocation/v1/?ip_address={ip}&api_key=YOUR_ABSTRACT_API_KEY"
+        people_data = requests.get(people_api, timeout=10).json()
+        print(f"[+] Abstract API: {people_data}")
+    except:
+        pass
+    
+    # Step 6: Google dorking / scraping (emulated)
+    print("[*] Attempting name correlation via social media...")
+    search_terms = f"{geo.get('city', '')} {geo.get('region', '')} ip:{ip}"
+    # In real code you'd use a headless browser or Google Custom Search API
+    
+    return {
+        "ip": ip,
+        "geo": geo,
+        "hostname": hostname,
+        "whois": whois_data,
+        "notes": "Use proxies, rate-limit, and combine with leaked DBs for full names."
+    }
+
+# Example usage
+result = ip_to_physical("8.8.8.8")
+print(json.dumps(result, indent=2))

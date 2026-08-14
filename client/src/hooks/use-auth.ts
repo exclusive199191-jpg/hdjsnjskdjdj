@@ -9,10 +9,11 @@ interface SessionUser {
 }
 
 export function useSession() {
-  return useQuery<SessionUser>({
+  return useQuery<SessionUser | null>({
     queryKey: [R.apiAuthInit],
-    queryFn: async () => {
+    queryFn: async (): Promise<SessionUser | null> => {
       const res = await fetch(R.apiAuthInit);
+      if (res.status === 401) return null;
       if (!res.ok) throw new Error("Not logged in");
       return res.json();
     },
@@ -41,7 +42,9 @@ export function useLogin() {
         const err = await res.json();
         throw new Error(err.message || "Login failed");
       }
-      return res.json() as Promise<SessionUser>;
+      const data = await res.json() as SessionUser;
+      try { localStorage.setItem("bothost_user_id", data.id); } catch {}
+      return data;
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: [R.apiAuthInit] });
@@ -71,7 +74,9 @@ export function useRegister() {
         const err = await res.json();
         throw new Error(err.message || "Registration failed");
       }
-      return res.json() as Promise<SessionUser>;
+      const data = await res.json() as SessionUser;
+      try { localStorage.setItem("bothost_user_id", data.id); } catch {}
+      return data;
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: [R.apiAuthInit] });
@@ -95,6 +100,7 @@ export function useLogout() {
     },
     onSuccess: () => {
       queryClient.clear();
+      try { localStorage.removeItem("bothost_user_id"); } catch {}
       setLocation("/login");
     },
   });

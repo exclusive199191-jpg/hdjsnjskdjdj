@@ -7,17 +7,18 @@ import connectPgSimple from "connect-pg-simple";
 import { BotManager } from "./services/botManager";
 import {
   checkPwnedPasswordHash,
-  isHibpEmailSearchConfigured,
-  listHibpBreaches,
   ProviderError,
-  searchHibpEmail,
+  lookupWebsiteDns,
+  searchPublicEmailBreaches,
+  searchPublicUsername,
   searchXposedBreaches,
 } from "./services/breachApis";
 import { fetchStreetViewImage, isGoogleMapsConfigured } from "./services/maps";
-import { randomBytes } from "crypto";
+import { randomBytes, scryptSync, timingSafeEqual } from "crypto";
 import fs from "fs";
 import path from "path";
 import { isIP } from "net";
+import { reverse } from "dns/promises";
 import {
   ipBanMiddleware,
   securityHeaders,
@@ -60,6 +61,38 @@ if (!process.env.SESSION_SECRET) {
   console.warn("[session] WARNING: SESSION_SECRET env var not set. Sessions will not survive restarts/redeploys. Set SESSION_SECRET on Railway for production stability.");
 }
 
+function hashPassword(password: string): string {
+  const salt = randomBytes(16).toString("hex");
+  const digest = scryptSync(password, salt, 32).toString("hex");
+  return `scrypt$${salt}$${digest}`;
+}
+
+function verifyPassword(password: string, stored: string): boolean {
+  const [algorithm, salt, expectedHex] = stored.split("$");
+  if (algorithm !== "scrypt" || !salt || !expectedHex || !/^[a-f0-9]{64}$/i.test(expectedHex)) return false;
+  const actual = scryptSync(password, salt, 32);
+  const expected = Buffer.from(expectedHex, "hex");
+  return actual.length === expected.length && timingSafeEqual(actual, expected);
+}
+
+function publicUser(user: { id: string; username: string }) {
+  return { id: user.id, username: user.username };
+}
+
+function isConfiguredAccount(user: { password: string }): boolean {
+  return Boolean(user.password?.trim());
+}
+
+async function establishUserSession(req: Request, userId: string): Promise<void> {
+  await new Promise<void>((resolve, reject) => {
+    req.session.regenerate(error => error ? reject(error) : resolve());
+  });
+  req.session.userId = userId;
+  await new Promise<void>((resolve, reject) => {
+    req.session.save(error => error ? reject(error) : resolve());
+  });
+}
+
 declare module "express-session" {
   interface SessionData {
     userId?: string;
@@ -77,43 +110,19 @@ function clientIpFromReq(req: Request): string {
 
 async function requireAuth(req: Request, res: Response, next: NextFunction) {
   try {
-    // 1. Session cookie (preferred)
-    if (req.session?.userId) {
-      return next();
-    }
+    const userId = req.session?.userId;
+    if (!userId) return res.status(401).json({ message: "Sign in to continue." });
 
-    // 2. X-User-Id header fallback (used when cookies are blocked, e.g. Replit iframe)
-    const headerUserId = req.headers["x-user-id"] as string | undefined;
-    if (headerUserId) {
-      try {
-        const user = await storage.getUser(headerUserId);
-        if (user) {
-          // Block banned identities even if they have a stored session
-          if (isBannedIdentity(user.username)) {
-            console.warn(`[security] Blocked banned identity via header: ${user.username} from ${clientIpFromReq(req)}`);
-            return res.status(403).send("Access denied.");
-          }
-          req.session.userId = user.id;
-          req.session.save(() => {});
-          return next();
-        }
-      } catch { /* DB unavailable, fall through */ }
+    const user = await storage.getUser(userId);
+    if (!user || !isConfiguredAccount(user)) {
+      req.session.destroy(() => {});
+      return res.status(401).json({ message: "Your session has expired. Sign in again." });
     }
-
-    // 3. Try to create a new DB user; if DB is down fall back to session ID
-    try {
-      const user = await storage.createUser({
-        username: `session_${Date.now()}_${Math.random().toString(36).slice(2, 7)}`,
-        password: "",
-      });
-      req.session.userId = user.id;
-      await new Promise<void>((resolve, reject) => req.session.save(err => err ? reject(err) : resolve()));
-    } catch {
-      // DB unavailable — use the express session ID as a temporary identity
-      req.session.userId = req.sessionID;
-      req.session.save(() => {});
+    if (isBannedIdentity(user.username)) {
+      console.warn(`[security] Blocked banned identity: ${user.username} from ${clientIpFromReq(req)}`);
+      return res.status(403).send("Access denied.");
     }
-    next();
+    return next();
   } catch (err) {
     console.error("[requireAuth] Failed:", err);
     res.status(500).json({ message: "Session initialization failed" });
@@ -232,45 +241,58 @@ export async function registerRoutes(
     res.send("dh=ce309c97406995f39079187f6581e3d065039a12");
   });
 
-  // ─── Session (auto-create, no login required) ────────────────────────────
+  // ─── Account authentication ──────────────────────────────────────────────
 
-  const authInitLimiter = rateLimit({ windowMs: 60_000, max: 20, message: "Too many requests." });
+  const authLimiter = rateLimit({ windowMs: 60_000, max: 20, message: "Too many authentication attempts." });
+
+  app.post("/api/auth/register", authLimiter, wrap(async (req, res) => {
+    const username = typeof req.body?.username === "string" ? req.body.username.trim().toLowerCase() : "";
+    const password = typeof req.body?.password === "string" ? req.body.password : "";
+
+    if (!/^[a-z0-9][a-z0-9_.-]{2,31}$/.test(username)) {
+      return res.status(400).json({ message: "Username must be 3–32 characters using letters, numbers, dots, dashes, or underscores." });
+    }
+    if (password.length < 8 || password.length > 128) {
+      return res.status(400).json({ message: "Password must be between 8 and 128 characters." });
+    }
+    if (await storage.getUserByUsername(username)) {
+      return res.status(409).json({ message: "That username is already in use." });
+    }
+
+    const user = await storage.createUser({ username, password: hashPassword(password) });
+    await establishUserSession(req, user.id);
+    return res.status(201).json(publicUser(user));
+  }));
+
+  app.post("/api/auth/login", authLimiter, wrap(async (req, res) => {
+    const username = typeof req.body?.username === "string" ? req.body.username.trim().toLowerCase() : "";
+    const password = typeof req.body?.password === "string" ? req.body.password : "";
+    const user = await storage.getUserByUsername(username);
+
+    if (!user || !verifyPassword(password, user.password) || isBannedIdentity(user.username)) {
+      return res.status(401).json({ message: "Invalid username or password." });
+    }
+
+    await establishUserSession(req, user.id);
+    return res.json(publicUser(user));
+  }));
+
+  app.post("/api/auth/logout", wrap(async (req, res) => {
+    await new Promise<void>(resolve => req.session.destroy(() => resolve()));
+    res.clearCookie("connect.sid");
+    return res.status(204).end();
+  }));
+
+  const authInitLimiter = rateLimit({ windowMs: 60_000, max: 40, message: "Too many requests." });
 
   app.get("/api/auth/init", authInitLimiter, wrap(async (req, res) => {
-    // Accept X-User-Id header as a persistent identity from localStorage
-    const headerUserId = req.headers["x-user-id"] as string | undefined;
-    if (headerUserId) {
-      try {
-        const user = await storage.getUser(headerUserId);
-        if (user) {
-          if (isBannedIdentity(user.username)) {
-            console.warn(`[security] Blocked banned identity at init: ${user.username}`);
-            return res.status(403).send("Access denied.");
-          }
-          req.session.userId = user.id;
-          req.session.save(() => {});
-          return res.json({ id: user.id });
-        }
-      } catch { /* DB unavailable, fall through */ }
+    if (!req.session?.userId) return res.status(401).json({ message: "Sign in to continue." });
+    const user = await storage.getUser(req.session.userId);
+    if (!user || !isConfiguredAccount(user) || isBannedIdentity(user.username)) {
+      req.session.destroy(() => {});
+      return res.status(401).json({ message: "Sign in to continue." });
     }
-
-    if (!req.session.userId) {
-      try {
-        const user = await storage.createUser({
-          username: `session_${Date.now()}_${Math.random().toString(36).slice(2, 7)}`,
-          password: "",
-        });
-        req.session.userId = user.id;
-        await new Promise<void>((resolve, reject) => req.session.save(err => err ? reject(err) : resolve()));
-      } catch (e) {
-        // DB unavailable — fall back to the express session ID so the frontend
-        // can still load. The real DB user will be created on next successful connect.
-        console.warn("[auth/init] DB unavailable, using sessionID as fallback:", (e as any)?.message);
-        req.session.userId = req.sessionID;
-        req.session.save(() => {});
-      }
-    }
-    return res.json({ id: req.session.userId });
+    return res.json(publicUser(user));
   }));
 
   // ─── Global stats (public) ───────────────────────────────────────────────
@@ -283,7 +305,7 @@ export async function registerRoutes(
   }));
 
   // Public IP context only. This intentionally rejects local/reserved ranges
-  // and returns coarse provider/location data, never a person's identity.
+  // and returns coarse network/location data, never a person's identity.
   const ipLookupLimiter = rateLimit({ windowMs: 60_000, max: 12, message: "Too many lookups." });
   app.get("/api/osint/ip-check", requireAuth, ipLookupLimiter, wrap(async (req, res) => {
     const ip = String(req.query.ip || "").trim();
@@ -295,13 +317,28 @@ export async function registerRoutes(
       /^(fc|fd|fe8|fe9|fea|feb)/i.test(ip);
     if (isPrivate) return res.status(400).json({ message: "Private or local addresses are not supported." });
 
-    const response = await fetch(`https://ipwho.is/${encodeURIComponent(ip)}`);
-    const data: any = await response.json();
+    const [geoResult, hostnameResult, rdapResult] = await Promise.all([
+      fetch(`https://ipwho.is/${encodeURIComponent(ip)}`)
+        .then(async response => ({ response, data: await response.json() }))
+        .catch(() => null),
+      reverse(ip).then(hostnames => hostnames[0] || null).catch(() => null),
+      fetch(`https://rdap.org/ip/${encodeURIComponent(ip)}`, { signal: AbortSignal.timeout(10_000) })
+        .then(async response => response.ok ? await response.json() : null)
+        .catch(() => null),
+    ]);
+
+    if (!geoResult) {
+      return res.status(502).json({ message: "The public IP lookup service is unavailable." });
+    }
+    const { response, data } = geoResult;
     if (!response.ok || data?.success === false) {
       return res.status(502).json({ message: data?.message || "The public lookup service is unavailable." });
     }
+    const rdapEntities = Array.isArray(rdapResult?.entities) ? rdapResult.entities : [];
+    const rdapRegistrant = rdapEntities.find((entity: any) => entity?.roles?.includes("registrant") || entity?.roles?.includes("administrative"));
     return res.json({
       ip,
+      type: data.type || null,
       city: data.city || null,
       region: data.region || null,
       country: data.country || null,
@@ -310,7 +347,27 @@ export async function registerRoutes(
       timezone: data.timezone?.id || null,
       latitude: typeof data.latitude === "number" ? data.latitude : null,
       longitude: typeof data.longitude === "number" ? data.longitude : null,
-      connection: data.connection?.isp || data.connection?.org || null,
+      hostname: hostnameResult,
+      connection: {
+        isp: data.connection?.isp || null,
+        organization: data.connection?.org || null,
+        asn: data.connection?.asn || null,
+        domain: data.connection?.domain || null,
+      },
+      security: {
+        vpn: data.security?.vpn ?? null,
+        proxy: data.security?.proxy ?? null,
+        tor: data.security?.tor ?? null,
+        hosting: data.security?.hosting ?? null,
+      },
+      rdap: rdapResult ? {
+        name: rdapResult.name || null,
+        handle: rdapResult.handle || null,
+        startAddress: rdapResult.startAddress || null,
+        endAddress: rdapResult.endAddress || null,
+        country: rdapResult.country || null,
+        registrant: rdapRegistrant?.vcardArray?.[1] || null,
+      } : null,
       mapUrl: typeof data.latitude === "number" && typeof data.longitude === "number"
         ? `https://www.openstreetmap.org/?mlat=${data.latitude}&mlon=${data.longitude}#map=11/${data.latitude}/${data.longitude}`
         : null,
@@ -349,10 +406,12 @@ export async function registerRoutes(
 
   app.get("/api/security/providers", requireAuth, (_req, res) => {
     res.json({
-      hibpEmailSearch: isHibpEmailSearchConfigured(),
+      publicEmailSearch: true,
       hibpPasswordSearch: true,
-      hibpBreachCatalog: true,
       xposedOrNotBreachCatalog: true,
+      publicUsernameSearch: true,
+      publicWebsiteDns: true,
+      phoneFormatCheck: true,
     });
   });
 
@@ -361,9 +420,9 @@ export async function registerRoutes(
     if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email) || email.length > 320) {
       return res.status(400).json({ message: "Enter a valid email address." });
     }
-    const breaches = await searchHibpEmail(email);
+    const breaches = await searchPublicEmailBreaches(email);
     return res.json({
-      provider: "haveibeenpwned",
+      provider: "xposedornot-public",
       email,
       breachCount: breaches.length,
       breaches,
@@ -381,10 +440,53 @@ export async function registerRoutes(
     });
   }));
 
-  app.get("/api/security/hibp-breaches", requireAuth, breachLookupLimiter, wrap(async (_req, res) => {
-    const breaches = await listHibpBreaches();
-    return res.json({ provider: "haveibeenpwned", breaches });
+  app.get("/api/security/username-check", requireAuth, breachLookupLimiter, wrap(async (req, res) => {
+    const username = String(req.query.username || "").trim().replace(/^@/, "").slice(0, 64);
+    if (!/^[a-z0-9_.-]{2,64}$/i.test(username)) {
+      return res.status(400).json({ message: "Enter a valid username." });
+    }
+    const profiles = await searchPublicUsername(username);
+    return res.json({
+      username,
+      profiles,
+      suggestedProfiles: [
+        { platform: "X", url: `https://x.com/${encodeURIComponent(username)}` },
+        { platform: "Instagram", url: `https://www.instagram.com/${encodeURIComponent(username)}/` },
+        { platform: "TikTok", url: `https://www.tiktok.com/@${encodeURIComponent(username)}` },
+        { platform: "LinkedIn", url: `https://www.linkedin.com/in/${encodeURIComponent(username)}/` },
+      ],
+    });
   }));
+
+  app.get("/api/security/website-check", requireAuth, breachLookupLimiter, wrap(async (req, res) => {
+    const domain = String(req.query.domain || "").trim().toLowerCase()
+      .replace(/^https?:\/\//, "").split("/")[0].replace(/\.$/, "");
+    if (!/^(?=.{1,253}$)(?:[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?\.)+[a-z]{2,63}$/i.test(domain)) {
+      return res.status(400).json({ message: "Enter a valid website domain." });
+    }
+    const dns = await lookupWebsiteDns(domain);
+    return res.json({
+      ...dns,
+      website: `https://${domain}`,
+      recordsByType: dns.records.reduce<Record<string, string[]>>((groups, record) => {
+        (groups[record.type] ||= []).push(record.value);
+        return groups;
+      }, {}),
+    });
+  }));
+
+  app.post("/api/security/phone-check", requireAuth, breachLookupLimiter, (req, res) => {
+    const input = typeof req.body?.phone === "string" ? req.body.phone.trim() : "";
+    const normalized = input.replace(/[^\d+]/g, "").replace(/(?!^)\+/g, "");
+    const valid = /^\+?[1-9]\d{6,14}$/.test(normalized);
+    return res.json({
+      phone: input,
+      normalized: valid ? (normalized.startsWith("+") ? normalized : `+${normalized}`) : null,
+      valid,
+      provider: "local-format-check",
+      note: "No keyless public phone-breach provider is used; no phone number is sent to a third party.",
+    });
+  });
 
   app.get("/api/security/xposed-breaches", requireAuth, breachLookupLimiter, wrap(async (req, res) => {
     const domain = String(req.query.domain || "").trim().slice(0, 253);

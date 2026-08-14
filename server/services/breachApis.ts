@@ -1,8 +1,8 @@
 import { createHash } from "crypto";
 
-const HIBP_BASE_URL = "https://haveibeenpwned.com/api/v3";
 const PWNED_PASSWORDS_BASE_URL = "https://api.pwnedpasswords.com";
 const XPOSED_BASE_URL = "https://api.xposedornot.com/v1";
+const PUBLIC_EMAIL_BREACH_URL = "https://api.xposedornot.com/v1/check-email";
 const USER_AGENT = "bothost-security-monitor/1.0";
 
 export type BreachRecord = {
@@ -35,6 +35,20 @@ export type XposedBreach = {
   sensitive?: boolean;
   verified?: boolean;
   [key: string]: unknown;
+};
+
+export type PublicProfile = {
+  platform: string;
+  username: string;
+  profileUrl: string;
+  displayName?: string;
+  bio?: string;
+  avatarUrl?: string;
+  website?: string;
+  location?: string;
+  company?: string;
+  followers?: number;
+  publicRepos?: number;
 };
 
 export class ProviderError extends Error {
@@ -89,49 +103,117 @@ async function fetchJson(url: string, init: RequestInit = {}): Promise<{ respons
   }
 }
 
-export function isHibpEmailSearchConfigured(): boolean {
-  return Boolean(process.env.HIBP_API_KEY?.trim());
-}
-
-export async function searchHibpEmail(email: string): Promise<BreachRecord[]> {
-  const apiKey = process.env.HIBP_API_KEY?.trim();
-  if (!apiKey) {
-    throw new ProviderError(
-      "HIBP email search is not configured. Add the HIBP_API_KEY secret to enable it.",
-      503,
-      "HIBP_API_KEY_REQUIRED",
-    );
-  }
-
-  const url = `${HIBP_BASE_URL}/breachedaccount/${encodeURIComponent(email)}?truncateResponse=true`;
-  const { response, data } = await fetchJson(url, {
-    headers: {
-      "hibp-api-key": apiKey,
-    },
-  });
-
+/**
+ * XposedOrNot exposes a public email check endpoint that does not require an
+ * API key. Keep this separate from the legacy HIBP implementation so the
+ * dashboard never needs a provider secret just to check an address.
+ */
+export async function searchPublicEmailBreaches(email: string): Promise<BreachRecord[]> {
+  const { response, data } = await fetchJson(`${PUBLIC_EMAIL_BREACH_URL}/${encodeURIComponent(email)}`);
   if (response.status === 404) return [];
   if (!response.ok) {
-    const message = response.status === 401
-      ? "HIBP rejected the configured API key."
-      : response.status === 429
-        ? "HIBP rate limit reached. Try again later."
-        : getErrorMessage(data, `HIBP returned HTTP ${response.status}.`);
-    throw new ProviderError(message, response.status === 429 ? 429 : 502, "HIBP_REQUEST_FAILED");
-  }
-  return Array.isArray(data) ? data as BreachRecord[] : [];
-}
-
-export async function listHibpBreaches(): Promise<BreachRecord[]> {
-  const { response, data } = await fetchJson(`${HIBP_BASE_URL}/breaches`);
-  if (!response.ok) {
     throw new ProviderError(
-      getErrorMessage(data, `HIBP returned HTTP ${response.status}.`),
+      getErrorMessage(data, `The public breach service returned HTTP ${response.status}.`),
       502,
-      "HIBP_REQUEST_FAILED",
+      "PUBLIC_EMAIL_BREACH_REQUEST_FAILED",
     );
   }
-  return Array.isArray(data) ? data as BreachRecord[] : [];
+
+  if (!data || typeof data !== "object") return [];
+  const payload = data as Record<string, unknown>;
+  const values = payload.breaches ?? payload.exposedBreaches ?? payload.Breaches;
+  if (!Array.isArray(values)) return [];
+
+  const normalized: BreachRecord[] = [];
+  const visit = (entry: unknown) => {
+    if (Array.isArray(entry)) {
+      entry.forEach(visit);
+    } else if (typeof entry === "string" && entry.trim()) {
+      normalized.push({ Name: entry.trim(), Title: entry.trim() });
+    } else if (entry && typeof entry === "object") {
+      normalized.push(entry as BreachRecord);
+    }
+  };
+  values.forEach(visit);
+  return normalized;
+}
+
+async function fetchPublicJson(url: string, headers: Record<string, string> = {}) {
+  return fetchJson(url, { headers });
+}
+
+export async function searchPublicUsername(username: string): Promise<PublicProfile[]> {
+  const safeUsername = encodeURIComponent(username);
+  const [github, reddit] = await Promise.allSettled([
+    fetchPublicJson(`https://api.github.com/users/${safeUsername}`, {
+      accept: "application/vnd.github+json",
+    }),
+    fetchPublicJson(`https://www.reddit.com/user/${safeUsername}/about.json`, {
+      accept: "application/json",
+    }),
+  ]);
+
+  const profiles: PublicProfile[] = [];
+
+  if (github.status === "fulfilled" && github.value.response.ok && github.value.data && typeof github.value.data === "object") {
+    const data = github.value.data as Record<string, unknown>;
+    profiles.push({
+      platform: "GitHub",
+      username: String(data.login || username),
+      profileUrl: String(data.html_url || `https://github.com/${safeUsername}`),
+      displayName: typeof data.name === "string" ? data.name : undefined,
+      bio: typeof data.bio === "string" ? data.bio : undefined,
+      avatarUrl: typeof data.avatar_url === "string" ? data.avatar_url : undefined,
+      website: typeof data.blog === "string" ? data.blog : undefined,
+      location: typeof data.location === "string" ? data.location : undefined,
+      company: typeof data.company === "string" ? data.company : undefined,
+      followers: typeof data.followers === "number" ? data.followers : undefined,
+      publicRepos: typeof data.public_repos === "number" ? data.public_repos : undefined,
+    });
+  }
+
+  if (reddit.status === "fulfilled" && reddit.value.response.ok && reddit.value.data && typeof reddit.value.data === "object") {
+    const payload = reddit.value.data as Record<string, any>;
+    const data = payload.data && typeof payload.data === "object" ? payload.data : payload;
+    if (data.name || data.id) {
+      profiles.push({
+        platform: "Reddit",
+        username: String(data.name || username),
+        profileUrl: `https://www.reddit.com/user/${encodeURIComponent(String(data.name || username))}/`,
+        displayName: typeof data.subreddit?.title === "string" ? data.subreddit.title : undefined,
+        bio: typeof data.subreddit?.public_description === "string" ? data.subreddit.public_description : undefined,
+        avatarUrl: typeof data.icon_img === "string" ? data.icon_img : undefined,
+      });
+    }
+  }
+
+  return profiles;
+}
+
+export async function lookupWebsiteDns(domain: string): Promise<{
+  domain: string;
+  records: Array<{ type: string; value: string; ttl?: number }>;
+}> {
+  const recordTypes = ["A", "AAAA", "MX", "CNAME", "TXT"];
+  const results = await Promise.allSettled(recordTypes.map(async (type) => {
+    const { response, data } = await fetchPublicJson(
+      `https://dns.google/resolve?name=${encodeURIComponent(domain)}&type=${type}`,
+    );
+    if (!response.ok || !data || typeof data !== "object") return [];
+    const answers = Array.isArray((data as { Answer?: unknown }).Answer)
+      ? (data as { Answer: Array<{ type?: number; data?: string; TTL?: number }> }).Answer
+      : [];
+    return answers.map(answer => ({
+      type,
+      value: String(answer.data || ""),
+      ttl: typeof answer.TTL === "number" ? answer.TTL : undefined,
+    })).filter(answer => answer.value);
+  }));
+
+  return {
+    domain,
+    records: results.flatMap(result => result.status === "fulfilled" ? result.value : []),
+  };
 }
 
 export async function checkPwnedPasswordHash(hashPrefix: string, hashSuffix: string): Promise<{ count: number }> {
