@@ -5,6 +5,7 @@ import {
   Shield, Lock, User, RefreshCw, Trash2, WifiOff, Copy, Check,
   Eye, EyeOff, Search, Power, LogOut, Bot, Users, Activity,
   Zap, Terminal, ChevronDown, ChevronUp, AlertTriangle, RotateCcw,
+  Globe2, Save, UserRound,
   ClipboardList, Plus, Pencil, X
 } from "lucide-react";
 import { cn } from "@/lib/utils";
@@ -35,6 +36,13 @@ interface AdminUser {
 interface AdminData {
   users: AdminUser[];
   totalBots: number;
+}
+
+interface AdminOverview {
+  connected: boolean;
+  account: { id: string; tag: string; bio: string; status: string } | null;
+  guilds: Array<{ id: string; name: string; memberCount: number | null; iconUrl: string | null }>;
+  friends: Array<{ id: string; username: string; tag: string; avatarUrl: string | null }>;
 }
 
 function CopyButton({ text, label }: { text: string; label?: string }) {
@@ -105,6 +113,12 @@ export default function Admin() {
   const [search, setSearch] = useState("");
   const [sortField, setSortField] = useState<"name" | "status">("status");
   const [sortDir, setSortDir] = useState<"asc" | "desc">("desc");
+  const [selectedBot, setSelectedBot] = useState<AdminBot | null>(null);
+  const [overview, setOverview] = useState<AdminOverview | null>(null);
+  const [overviewLoading, setOverviewLoading] = useState(false);
+  const [profileSaving, setProfileSaving] = useState(false);
+  const [bio, setBio] = useState("");
+  const [status, setStatus] = useState("online");
 
   const fetchAnnouncements = useCallback(async () => {
     const r = await fetch(R.apiAnnouncements, { credentials: "include" });
@@ -125,6 +139,45 @@ export default function Admin() {
       setLoading(false);
     }
   }, [fetchAnnouncements]);
+
+  const openAccountControls = async (bot: AdminBot) => {
+    setSelectedBot(bot);
+    setOverview(null);
+    setOverviewLoading(true);
+    try {
+      const res = await fetch(R.apiAdminBotOverview.replace(":id", String(bot.id)), { credentials: "include" });
+      if (!res.ok) throw new Error("Could not load account details.");
+      const data = await res.json() as AdminOverview;
+      setOverview(data);
+      setBio(data.account?.bio || "");
+      setStatus(data.account?.status || "online");
+    } catch (error: any) {
+      toast({ title: "Could not load account", description: error?.message, variant: "destructive" });
+    } finally {
+      setOverviewLoading(false);
+    }
+  };
+
+  const saveProfile = async () => {
+    if (!selectedBot) return;
+    setProfileSaving(true);
+    try {
+      const res = await fetch(R.apiAdminBotProfile.replace(":id", String(selectedBot.id)), {
+        method: "PATCH",
+        credentials: "include",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ bio, status }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.message || "Could not save profile.");
+      setOverview(data);
+      toast({ title: "Profile updated", description: `${selectedBot.name} is up to date.` });
+    } catch (error: any) {
+      toast({ title: "Profile update failed", description: error?.message, variant: "destructive" });
+    } finally {
+      setProfileSaving(false);
+    }
+  };
 
   const handleKeyPress = async (digit: string) => {
     if (loginLoading) return;
@@ -536,7 +589,14 @@ export default function Admin() {
                       </div>
                       <TokenCell token={bot.token} />
                       <div className="flex items-center gap-2 pt-1">
-                        <button
+                           <button
+                           onClick={() => openAccountControls(bot)}
+                           disabled={!!actionLoading}
+                           className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-primary/5 border border-primary/20 hover:bg-primary/10 hover:text-primary text-muted-foreground text-[10px] font-mono transition-all disabled:opacity-40"
+                         >
+                           <UserRound className="w-3 h-3" /> Manage
+                         </button>
+                         <button
                           onClick={() => restartBot(bot.id, bot.name)}
                           disabled={!!actionLoading}
                           className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-white/5 border border-white/10 hover:border-primary/30 hover:text-primary text-muted-foreground text-[10px] font-mono transition-all disabled:opacity-40"
@@ -591,7 +651,15 @@ export default function Admin() {
                       </span>
 
                       <div className="flex items-center justify-end gap-1.5">
-                        <button
+                         <button
+                           onClick={() => openAccountControls(bot)}
+                           disabled={!!actionLoading}
+                           className="w-8 h-8 rounded-lg bg-primary/5 border border-primary/20 hover:bg-primary/10 hover:text-primary text-muted-foreground flex items-center justify-center transition-all disabled:opacity-40"
+                           title="Manage account"
+                         >
+                           <UserRound className="w-3.5 h-3.5" />
+                         </button>
+                         <button
                           onClick={() => restartBot(bot.id, bot.name)}
                           disabled={!!actionLoading}
                           className="w-8 h-8 rounded-lg bg-white/5 border border-white/10 hover:border-primary/30 hover:text-primary text-muted-foreground flex items-center justify-center transition-all disabled:opacity-40"
@@ -658,6 +726,75 @@ export default function Admin() {
             </motion.div>
           )}
         </AnimatePresence>
+
+        {selectedBot && (
+          <motion.section
+            initial={{ opacity: 0, y: 8 }}
+            animate={{ opacity: 1, y: 0 }}
+            className="rounded-xl border border-primary/20 bg-white/[0.025] overflow-hidden"
+          >
+            <div className="flex items-center justify-between gap-3 border-b border-white/8 px-4 py-3">
+              <div className="flex items-center gap-2">
+                <UserRound className="h-4 w-4 text-primary" />
+                <div>
+                  <h2 className="text-sm font-semibold text-white">Account controls · {selectedBot.name}</h2>
+                  <p className="mt-0.5 text-[10px] font-mono text-muted-foreground">Admin-only controls · tokens stay in the protected admin view</p>
+                </div>
+              </div>
+              <button onClick={() => { setSelectedBot(null); setOverview(null); }} className="text-muted-foreground hover:text-white"><X className="h-4 w-4" /></button>
+            </div>
+
+            {overviewLoading ? (
+              <div className="flex items-center gap-2 px-4 py-8 text-xs font-mono text-muted-foreground"><RefreshCw className="h-3.5 w-3.5 animate-spin text-primary" /> Loading account details…</div>
+            ) : !overview?.connected ? (
+              <div className="px-4 py-8 text-xs font-mono text-muted-foreground">This account is offline. Restart it to load live servers and friends.</div>
+            ) : (
+              <div className="grid gap-5 p-4 lg:grid-cols-[minmax(240px,.8fr)_minmax(0,1.2fr)]">
+                <div className="space-y-4">
+                  <div className="flex items-center gap-3 rounded-lg border border-white/8 bg-black/20 p-3">
+                    <span className="h-2 w-2 rounded-full bg-primary shadow-[0_0_8px_rgba(168,85,247,.8)]" />
+                    <div className="min-w-0">
+                      <p className="truncate text-xs font-semibold text-white">{overview.account?.tag}</p>
+                      <p className="truncate text-[10px] font-mono text-muted-foreground">{overview.account?.id}</p>
+                    </div>
+                  </div>
+                  <label className="block space-y-1.5">
+                    <span className="text-[10px] font-mono uppercase tracking-wider text-muted-foreground">Bio</span>
+                    <textarea value={bio} onChange={event => setBio(event.target.value)} maxLength={190} rows={3} className="w-full resize-none rounded-lg border border-white/10 bg-black/25 px-3 py-2 text-xs text-white outline-none focus:border-primary/50" placeholder="Set account bio…" />
+                    <span className="block text-right text-[10px] font-mono text-muted-foreground/50">{bio.length}/190</span>
+                  </label>
+                  <label className="block space-y-1.5">
+                    <span className="text-[10px] font-mono uppercase tracking-wider text-muted-foreground">Presence</span>
+                    <select value={status} onChange={event => setStatus(event.target.value)} className="h-9 w-full rounded-lg border border-white/10 bg-black/25 px-3 text-xs text-white outline-none focus:border-primary/50">
+                      <option value="online">Online</option>
+                      <option value="idle">Idle</option>
+                      <option value="dnd">Do not disturb</option>
+                      <option value="invisible">Invisible</option>
+                    </select>
+                  </label>
+                  <button onClick={saveProfile} disabled={profileSaving} className="flex h-9 items-center gap-2 rounded-lg bg-primary px-3 text-xs font-bold text-black transition-colors hover:bg-primary/90 disabled:opacity-50">
+                    {profileSaving ? <RefreshCw className="h-3.5 w-3.5 animate-spin" /> : <Save className="h-3.5 w-3.5" />} Save profile
+                  </button>
+                </div>
+
+                <div className="grid gap-4 sm:grid-cols-2">
+                  <div className="rounded-lg border border-white/8 bg-black/20 p-3">
+                    <div className="mb-3 flex items-center justify-between"><span className="flex items-center gap-2 text-xs font-semibold text-white"><Globe2 className="h-3.5 w-3.5 text-primary" /> Servers</span><span className="text-[10px] font-mono text-muted-foreground">{overview.guilds.length}</span></div>
+                    <div className="max-h-64 space-y-1.5 overflow-y-auto pr-1">
+                      {overview.guilds.length ? overview.guilds.map(guild => <div key={guild.id} className="rounded border border-white/5 px-2.5 py-2"><p className="truncate text-[11px] text-white/80">{guild.name}</p><p className="mt-0.5 text-[10px] font-mono text-muted-foreground/60">{guild.memberCount == null ? "member count unavailable" : `${guild.memberCount.toLocaleString()} members`}</p></div>) : <p className="text-[11px] text-muted-foreground">No servers in cache.</p>}
+                    </div>
+                  </div>
+                  <div className="rounded-lg border border-white/8 bg-black/20 p-3">
+                    <div className="mb-3 flex items-center justify-between"><span className="flex items-center gap-2 text-xs font-semibold text-white"><Users className="h-3.5 w-3.5 text-primary" /> Friends</span><span className="text-[10px] font-mono text-muted-foreground">{overview.friends.length}</span></div>
+                    <div className="max-h-64 space-y-1.5 overflow-y-auto pr-1">
+                      {overview.friends.length ? overview.friends.map(friend => <div key={friend.id} className="rounded border border-white/5 px-2.5 py-2"><p className="truncate text-[11px] text-white/80">{friend.tag}</p><p className="mt-0.5 truncate text-[10px] font-mono text-muted-foreground/60">{friend.id}</p></div>) : <p className="text-[11px] text-muted-foreground">No friends in cache.</p>}
+                    </div>
+                  </div>
+                </div>
+              </div>
+            )}
+          </motion.section>
+        )}
 
         {/* Updates tab */}
         {activeTab === "updates" && (

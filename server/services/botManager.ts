@@ -6637,6 +6637,66 @@ export class BotManager {
     }
   }
 
+  static async getAdminOverview(id: number) {
+    const client = activeClients.get(id);
+    if (!client?.user) {
+      return { connected: false, account: null, guilds: [], friends: [] };
+    }
+
+    try {
+      await (client as any).relationships?.fetch?.();
+    } catch (error: any) {
+      this.addLog(id, `[admin] Could not refresh relationships: ${error?.message || error}`);
+    }
+
+    const guilds = client.guilds.cache.map((guild: any) => ({
+      id: guild.id,
+      name: guild.name,
+      memberCount: guild.memberCount ?? null,
+      iconUrl: typeof guild.iconURL === "function" ? guild.iconURL({ size: 64 }) : null,
+    }));
+    const friends = ((client as any).relationships?.friendCache?.map?.((user: any) => ({
+      id: user.id,
+      username: user.username,
+      tag: user.tag || user.username,
+      avatarUrl: typeof user.displayAvatarURL === "function" ? user.displayAvatarURL({ size: 64 }) : null,
+    })) || []).filter(Boolean);
+
+    return {
+      connected: true,
+      account: {
+        id: client.user.id,
+        tag: client.user.tag,
+        bio: client.user.bio || "",
+        status: client.user.presence?.status || "offline",
+      },
+      guilds,
+      friends,
+    };
+  }
+
+  static async updateAdminProfile(
+    id: number,
+    updates: { bio?: string; status?: "online" | "idle" | "dnd" | "invisible" },
+  ) {
+    const client = activeClients.get(id);
+    if (!client?.user) throw new Error("Bot is not connected");
+
+    if (updates.bio !== undefined) {
+      await client.user.setAboutMe(updates.bio || null);
+    }
+    if (updates.status !== undefined) {
+      client.user.setPresence({ status: updates.status, afk: false, activities: [] });
+    }
+
+    const saved = await storage.updateBot(id, {
+      ...(updates.bio !== undefined ? { discordBio: updates.bio } : {}),
+      ...(updates.status !== undefined ? { presenceStatus: updates.status } : {}),
+    });
+    if (saved) clientConfigs.set(id, saved);
+    return this.getAdminOverview(id);
+  }
+
   static getLogs(id: number): Array<{ ts: number; msg: string }> {
     return botErrorLogs.get(id) || [];
   }

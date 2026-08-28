@@ -1,1 +1,2 @@
 - [Session startup ordering](session-db-startup.md) — migrate PostgreSQL tables before constructing the session store to avoid startup races.
+- [Imported TypeScript workflows](workflow-startup.md) — call locally installed CLIs directly; interactive npx installs can leave the preview unavailable.

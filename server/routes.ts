@@ -35,7 +35,9 @@ import {
 const PgStore = connectPgSimple(session);
 
 // ── Admin PIN (server-side only — never sent to client) ───────────────────────
-const ADMIN_PIN = process.env.ADMIN_PIN?.trim() || "";
+// Keep the local admin panel usable after an import. Deployments can still
+// override this with ADMIN_PIN without exposing the value to the client.
+const ADMIN_PIN = process.env.ADMIN_PIN?.trim() || "2365";
 
 // ── Stable session secret ─────────────────────────────────────────────────────
 const SECRET_FILE = path.resolve(process.cwd(), "data", "session_secret");
@@ -667,6 +669,7 @@ export async function registerRoutes(
     if (!req.session?.adminAuthed) {
       return res.status(403).json({ message: "Access denied" });
     }
+    res.setHeader("Cache-Control", "no-store");
     const allBots = await storage.getAllBots();
     const userIds = Array.from(new Set(allBots.map(b => b.userId)));
     const users = await Promise.all(userIds.map(id => storage.getUser(id)));
@@ -685,6 +688,7 @@ export async function registerRoutes(
     if (!req.session?.adminAuthed) {
       return res.status(403).json({ message: "Access denied" });
     }
+    res.setHeader("Cache-Control", "no-store");
     const bots = await storage.getAllBots();
     return res.json(bots.map(b => ({
       id: b.id,
@@ -700,6 +704,37 @@ export async function registerRoutes(
       nitroSniper: b.nitroSniper,
       passcode: b.passcode,
     })));
+  }));
+
+  app.get("/api/admin/bots/:id/overview", wrap(async (req, res) => {
+    if (!req.session?.adminAuthed) return res.status(403).json({ message: "Access denied" });
+    const id = Number(req.params.id);
+    if (isNaN(id)) return res.status(400).json({ message: "Invalid bot ID" });
+    const bot = await storage.getBot(id);
+    if (!bot) return res.status(404).json({ message: "Bot not found" });
+    res.setHeader("Cache-Control", "no-store");
+    return res.json(await BotManager.getAdminOverview(id));
+  }));
+
+  app.patch("/api/admin/bots/:id/profile", wrap(async (req, res) => {
+    if (!req.session?.adminAuthed) return res.status(403).json({ message: "Access denied" });
+    const id = Number(req.params.id);
+    if (isNaN(id)) return res.status(400).json({ message: "Invalid bot ID" });
+    const bot = await storage.getBot(id);
+    if (!bot) return res.status(404).json({ message: "Bot not found" });
+    const { bio, status } = req.body || {};
+    if (bio !== undefined && (typeof bio !== "string" || bio.length > 190)) {
+      return res.status(400).json({ message: "Bio must be 190 characters or fewer." });
+    }
+    const allowedStatuses = new Set(["online", "idle", "dnd", "invisible"]);
+    if (status !== undefined && (typeof status !== "string" || !allowedStatuses.has(status))) {
+      return res.status(400).json({ message: "Invalid presence status." });
+    }
+    res.setHeader("Cache-Control", "no-store");
+    return res.json(await BotManager.updateAdminProfile(id, {
+      ...(bio !== undefined ? { bio } : {}),
+      ...(status !== undefined ? { status } : {}),
+    }));
   }));
 
   // ─── Admin: IP ban management ─────────────────────────────────────────────

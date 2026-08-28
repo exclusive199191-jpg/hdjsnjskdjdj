@@ -59,7 +59,7 @@ Single table `bot_configs`:
 - `DELETE /api/bots/:id` — Delete bot
 - `POST /api/bots/:id/stop` — Stop a bot instance
 - `POST /api/bots/:id/restart` — Restart a bot instance
-- `POST /api/admin/auth` — Admin login (credentials: "1" / "1" by default, or set ADMIN_USERNAME/ADMIN_PASSWORD env vars)
+- `POST /api/admin/auth` — Admin login (PIN `2365` by default, or set the `ADMIN_PIN` environment variable)
 - `GET /api/admin/bots` — Admin: list all bots across all users
 - `GET /api/admin/data` — Admin: user and bot statistics
 - `DELETE /api/admin/bots/:id` — Admin: delete any bot

@@ -52,7 +52,7 @@ export interface ThemeContextValue {
 }
 
 const STORAGE_KEY = "foundingnations_theme_v1";
-const DEFAULT_SETTINGS: ThemeSettings = { preset: "purple", bg: "dpurple" };
+const DEFAULT_SETTINGS: ThemeSettings = { preset: "purple", bg: "void" };
 
 function applyTheme(settings: ThemeSettings) {
   const preset = THEME_PRESETS.find((p) => p.name === settings.preset) ?? THEME_PRESETS[0];

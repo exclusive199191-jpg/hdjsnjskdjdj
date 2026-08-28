@@ -225,8 +225,54 @@
   opacity: 1;
 }
 
+.dashboard-shell {
+  position: relative;
+  isolation: isolate;
+  background: #020104;
+}
+
+.dashboard-shell > aside,
+.dashboard-shell > main {
+  position: relative;
+  z-index: 2;
+}
+
+.dashboard-shell [class*="border-white"] {
+  border-color: rgba(168, 85, 247, 0.22) !important;
+}
+
+.dashboard-shell [class*="bg-white/"] {
+  background-color: rgba(15, 8, 25, 0.72);
+}
+
+.dashboard-shell section {
+  border-color: rgba(168, 85, 247, 0.28) !important;
+  box-shadow: 0 16px 45px rgba(0, 0, 0, 0.24), inset 0 1px 0 rgba(216, 180, 254, 0.04);
+}
+
+.dashboard-shell section:hover {
+  border-color: rgba(192, 132, 252, 0.42) !important;
+}
+
+.dashboard-snow {
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+  overflow: hidden;
+  pointer-events: none;
+  opacity: 0.82;
+}
+
+.dashboard-snow .snowflake {
+  position: absolute;
+}
+
 @media (prefers-reduced-motion: reduce) {
   .cursor-ambient-glow {
+    display: none;
+  }
+
+  .dashboard-snow {
     display: none;
   }
 }

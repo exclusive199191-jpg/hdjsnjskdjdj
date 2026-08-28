@@ -27,12 +27,19 @@ import { RpcDialog } from "@/components/RpcDialog";
 import { SecurityExposurePanel } from "@/components/SecurityExposurePanel";
 import { IpReportPanel } from "@/components/IpReportPanel";
 import { ThemeCustomizer } from "@/components/ThemeCustomizer";
-import { useTheme } from "@/hooks/use-theme";
 import { useAuth, useLogout } from "@/hooks/use-auth";
 import { R } from "@/lib/r";
 import { COMMANDS, COMMAND_CATEGORIES } from "@/lib/commands";
 import { cn } from "@/lib/utils";
 import type { BotConfig } from "@shared/schema";
+
+const SNOWFLAKES = Array.from({ length: 56 }, (_, index) => ({
+  left: `${(index * 47) % 101}%`,
+  size: `${2 + (index % 4)}px`,
+  duration: `${9 + (index % 10)}s`,
+  delay: `${-(index % 14)}s`,
+  opacity: 0.22 + (index % 6) * 0.08,
+}));
 
 function formatUptime(seconds: number) {
   const days = Math.floor(seconds / 86400);
@@ -105,7 +112,6 @@ function AccountRow({ bot, onRpc }: { bot: BotConfig; onRpc: (bot: BotConfig) =>
 }
 
 export default function Dashboard() {
-  const { currentBg } = useTheme();
   const { data: user } = useAuth();
   const logout = useLogout();
   const { data: bots, isLoading } = useBots();
@@ -126,13 +132,29 @@ export default function Dashboard() {
 
   return (
     <div
-      className="ios-safe-bottom flex min-h-[100dvh] bg-[#08050f] text-white"
+      className="dashboard-shell ios-safe-bottom flex min-h-[100dvh] overflow-hidden bg-[#020104] text-white"
       style={{
-        backgroundColor: currentBg.cssValue,
+        backgroundColor: "#020104",
         backgroundImage: "radial-gradient(circle at 12% 0%, rgba(124,58,237,0.14), transparent 32rem), radial-gradient(circle at 92% 75%, rgba(76,29,149,0.12), transparent 30rem)",
       }}
     >
-      <aside className="hidden w-[248px] shrink-0 flex-col border-r border-white/[0.08] bg-black/15 md:flex">
+      <div className="dashboard-snow" aria-hidden="true">
+        {SNOWFLAKES.map((flake, index) => (
+          <span
+            key={index}
+            className="snowflake"
+            style={{
+              left: flake.left,
+              opacity: flake.opacity,
+              ["--snow-size" as string]: flake.size,
+              ["--snow-duration" as string]: flake.duration,
+              ["--snow-delay" as string]: flake.delay,
+            } as React.CSSProperties}
+          />
+        ))}
+      </div>
+
+      <aside className="hidden w-[248px] shrink-0 flex-col border-r border-white/[0.08] bg-black/35 md:flex">
         <div className="flex h-[72px] items-center border-b border-white/[0.08] px-5">
           <Link href="/" className="flex items-center gap-3" aria-label="bothost overview">
             <span className="flex h-9 w-9 items-center justify-center rounded-xl bg-primary font-black text-primary-foreground shadow-lg shadow-primary/20">b</span>
@@ -153,6 +175,7 @@ export default function Dashboard() {
           <div className="flex items-center gap-3 rounded-lg bg-primary/10 px-3 py-2.5 text-sm text-primary"><LayoutDashboard className="h-4 w-4" /> Overview</div>
           <Link href="/accounts" className="flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm text-white/45 transition-colors hover:bg-white/[0.04] hover:text-white"><UsersRound className="h-4 w-4" /> Accounts <span className="ml-auto text-[10px] text-white/20">{stats?.totalHosted ?? 0}</span></Link>
           <Link href={R.routeSupport} className="flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm text-white/45 transition-colors hover:bg-white/[0.04] hover:text-white"><LifeBuoy className="h-4 w-4" /> Support</Link>
+           <Link href={R.routeAdmin} className="flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm text-white/45 transition-colors hover:bg-violet-400/10 hover:text-violet-200"><ShieldCheck className="h-4 w-4" /> Admin panel</Link>
         </nav>
         <div className="px-5 pb-2 pt-7 text-[10px] uppercase tracking-[0.18em] text-white/25">Connected accounts</div>
         <div className="space-y-1 px-3">
@@ -176,6 +199,9 @@ export default function Dashboard() {
         <header className="flex h-[72px] items-center justify-between border-b border-white/[0.08] px-5 sm:px-8">
           <div className="flex items-center gap-2 text-sm"><span className="text-white/35">Workspace</span><span className="text-white/15">/</span><span>Overview</span></div>
           <div className="flex items-center gap-2">
+            <Link href={R.routeAdmin} aria-label="Open admin panel" className="inline-flex items-center gap-2 border border-violet-400/25 bg-violet-500/10 px-2.5 py-1.5 text-xs text-violet-200 transition-colors hover:bg-violet-500/20">
+              <ShieldCheck className="h-3.5 w-3.5" /> <span className="hidden sm:inline">Admin</span>
+            </Link>
             <ThemeCustomizer />
             <span className="hidden items-center gap-2 border border-white/10 px-2.5 py-1.5 text-xs text-white/35 sm:inline-flex"><span className="h-1.5 w-1.5 animate-pulse rounded-full bg-primary" /> Live</span>
             <div className="flex items-center gap-2 border border-white/10 px-2.5 py-1.5">
@@ -204,7 +230,7 @@ export default function Dashboard() {
           </div>
 
           <div className="mt-8 grid grid-cols-1 gap-5 lg:grid-cols-[minmax(0,1.35fr)_minmax(280px,.65fr)]">
-            <section className="border border-white/[0.08] bg-white/[0.025]">
+             <section className="border border-white/[0.08] bg-white/[0.025]">
               <div className="flex items-center justify-between border-b border-white/[0.08] px-5 py-4">
                 <div><h2 className="text-sm font-semibold">Connected accounts</h2><p className="mt-1 text-xs text-white/30">Select an account to open its workspace.</p></div>
                 <Link href="/accounts" className="flex items-center gap-1 text-[11px] text-primary hover:text-primary/80">View all <ArrowUpRight className="h-3 w-3" /></Link>
@@ -215,9 +241,9 @@ export default function Dashboard() {
               )}
             </section>
 
-            <section className="border border-white/[0.08] bg-white/[0.025]">
+             <section className="border border-white/[0.08] bg-white/[0.025]">
               <div className="border-b border-white/[0.08] px-5 py-4"><h2 className="text-sm font-semibold">Workspace tools</h2><p className="mt-1 text-xs text-white/30">Everything available after connecting an account.</p></div>
-              <div className="space-y-2 p-4">
+               <div className="space-y-2 p-4">
                 <Link href={R.routeSupport} className="flex items-start gap-3 border border-white/[0.07] p-3 transition-colors hover:bg-white/[0.04]"><Command className="mt-0.5 h-4 w-4 text-primary" /><div><p className="text-xs text-white/75">Command reference</p><p className="mt-1 text-[11px] text-white/30">{COMMANDS.length} commands with examples</p></div></Link>
                 <Link href={R.routeSupport} className="flex items-start gap-3 border border-white/[0.07] p-3 transition-colors hover:bg-white/[0.04]"><LifeBuoy className="mt-0.5 h-4 w-4 text-violet-300" /><div><p className="text-xs text-white/75">Setup &amp; support</p><p className="mt-1 text-[11px] text-white/30">Account setup and troubleshooting</p></div></Link>
                 <div className="flex items-start gap-3 border border-white/[0.07] p-3"><ShieldCheck className="mt-0.5 h-4 w-4 text-primary" /><div><p className="text-xs text-white/75">Private workspace</p><p className="mt-1 text-[11px] text-white/30">Your connected account data stays isolated.</p></div></div>

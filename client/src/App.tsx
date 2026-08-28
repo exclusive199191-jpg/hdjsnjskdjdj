@@ -117,7 +117,9 @@ function AppInner() {
     );
   }
 
-  if (!session) return <Login />;
+  // Admin has its own PIN gate and must remain reachable even when there is
+  // no regular workspace session.
+  if (!session && window.location.pathname !== R.routeAdmin) return <Login />;
 
   return <Router />;
 }
